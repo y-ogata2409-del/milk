@@ -51,6 +51,9 @@
         .loading { text-align: center; padding: 20px; color: #7f8c8d; }
         .legend-item { display: flex; align-items: center; gap: 4px; }
         .legend-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+        .chart-mode-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+        .mode-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); background: #f0f4f8; font-size: 0.85rem; font-weight: bold; cursor: pointer; }
+        .mode-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
     </style>
     <!-- ファビコン -->
 <link rel="icon" type="image/png" href="icon.png">
@@ -112,7 +115,11 @@
         </div>
         <!-- ↓ ここから追加 -->
         <div class="card">
-            <h2>直近7日間の量</h2>
+            <h2>直近7日間のミルク量</h2>
+            <div class="chart-mode-toggle">
+                <button id="mode-btn-session" class="mode-btn active" onclick="setChartMode('session')">回数ごと</button>
+                <button id="mode-btn-time" class="mode-btn" onclick="setChartMode('timeofday')">時間帯ごと</button>
+            </div>
             <div id="weekly-chart"></div>
             <div id="weekly-chart-legend" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; font-size:0.8rem;"></div>
         </div>
@@ -165,6 +172,12 @@
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbwE7zgC9r2-pRuIDQNbeSMHhKb3gHxtEZdmNZD6gcHMSCVo6kl4kSlnbhf_x_EWOPdI/exec';
 
     let lastRecordTime = null;
+    let chartMode = 'session'; // 'session'(回数ごと) or 'timeofday'(時間帯ごと)
+
+    // パステル系カラーパレット
+    const sessionPalette = ['#a8d8ea', '#ffb3ba', '#ffe4a3', '#b5e7c8', '#d4b3e0', '#ffcda3', '#a3e0d0', '#e0b3d4'];
+    const timePalette = ['#b3bce0', '#a8dced', '#ffdba8', '#d9b8e0']; // 0時〜, 6時〜, 12時〜, 18時〜
+    const timeLabels = ['0:00〜', '6:00〜', '12:00〜', '18:00〜'];
     let allRecords = [];
     let recordTimeManuallyChanged = false; // ← 追加：ユーザーが手動で時刻を変えたかどうか
 
@@ -422,8 +435,6 @@
         const legendContainer = document.getElementById('weekly-chart-legend');
         if (!container) return;
     
-        const palette = ['#6da5c0', '#ff8b8b', '#f6c667', '#8dd3a4', '#b19cd9', '#f2a65a', '#5eb1bf', '#c77dff'];
-    
         // 直近7日分の日付キー(今日を含む)を作成
         const days = [];
         for (let i = 6; i >= 0; i--) {
@@ -447,7 +458,6 @@
         });
     
         const maxTotal = Math.max(...dayData.map(d => d.total), 100);
-        const maxSessions = Math.max(...dayData.map(d => d.records.length), 1);
     
         // SVG描画パラメータ
         const width = 340, height = 210;
@@ -465,19 +475,17 @@
             d.records.forEach((r, sessionIndex) => {
                 const segHeight = (Number(r.amount) / maxTotal) * chartHeight;
                 yCursor -= segHeight;
-                const color = palette[sessionIndex % palette.length];
+                const color = getColorForRecord(r, sessionIndex); // ← モードに応じた色
                 svg += `<rect x="${x}" y="${yCursor}" width="${barWidth}" height="${segHeight}" fill="${color}" rx="2">
                             <title>${r.time} ${r.amount}ml</title>
                         </rect>`;
             });
     
-            // 合計量ラベル(棒の上)
             if (d.total > 0) {
                 const topY = marginTop + chartHeight - (d.total / maxTotal) * chartHeight;
                 svg += `<text x="${x + barWidth / 2}" y="${topY - 4}" font-size="10" text-anchor="middle" fill="#2c3e50">${d.total}</text>`;
             }
     
-            // x軸ラベル(日付＋曜日)
             const md = `${d.dateObj.getMonth() + 1}/${d.dateObj.getDate()}`;
             const wd = new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', weekday: 'short' }).format(d.dateObj);
             svg += `<text x="${x + barWidth / 2}" y="${height - marginBottom + 14}" font-size="10" text-anchor="middle" fill="#7f8c8d">${md}(${wd})</text>`;
@@ -486,11 +494,20 @@
         svg += `</svg>`;
         container.innerHTML = svg;
     
-        // 凡例(何回目の授乳かを色で表示)
+        // 凡例(モードに応じて内容を切り替え)
         if (legendContainer) {
             let legendHtml = '';
-            for (let i = 0; i < maxSessions; i++) {
-                legendHtml += `<span class="legend-item"><span class="legend-swatch" style="background:${palette[i % palette.length]}"></span>${i + 1}回目</span>`;
+            if (chartMode === 'timeofday') {
+                // 時間帯ごと:常に固定4項目
+                for (let i = 0; i < 4; i++) {
+                    legendHtml += `<span class="legend-item"><span class="legend-swatch" style="background:${timePalette[i]}"></span>${timeLabels[i]}</span>`;
+                }
+            } else {
+                // 回数ごと:実際の最大回数分だけ表示(「回目」は省略)
+                const maxSessions = Math.max(...dayData.map(d => d.records.length), 1);
+                for (let i = 0; i < maxSessions; i++) {
+                    legendHtml += `<span class="legend-item"><span class="legend-swatch" style="background:${sessionPalette[i % sessionPalette.length]}"></span>${i + 1}</span>`;
+                }
             }
             legendContainer.innerHTML = legendHtml;
         }
@@ -569,6 +586,31 @@
         } catch (err) {
             alert('削除エラー: ' + err.message);
         }
+    }
+    function setChartMode(mode) {
+        chartMode = mode;
+        document.getElementById('mode-btn-session').classList.toggle('active', mode === 'session');
+        document.getElementById('mode-btn-time').classList.toggle('active', mode === 'timeofday');
+        renderWeeklyChart();
+    }
+    
+    // JSTでの「時」(0〜23)を取得
+    function getJSTHour(timestamp) {
+        const d = new Date(timestamp);
+        const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Tokyo', hour: 'numeric', hour12: false }).formatToParts(d);
+        let hour = parseInt(parts.find(p => p.type === 'hour').value, 10);
+        if (hour === 24) hour = 0;
+        return hour;
+    }
+    
+    // 現在のモードに応じて、1回分の授乳記録の色を返す
+    function getColorForRecord(record, sessionIndex) {
+        if (chartMode === 'timeofday') {
+            const hour = getJSTHour(record.timestamp);
+            const bucket = hour < 6 ? 0 : hour < 12 ? 1 : hour < 18 ? 2 : 3;
+            return timePalette[bucket];
+        }
+        return sessionPalette[sessionIndex % sessionPalette.length];
     }
 </script>
 </body>
