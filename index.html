@@ -52,6 +52,23 @@
         .legend-item { display: flex; align-items: center; gap: 4px; }
         .legend-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
     </style>
+    <!-- ファビコン -->
+<link rel="icon" type="image/png" href="icon.png">
+
+<!-- iOSのホーム画面追加用 -->
+<link rel="apple-touch-icon" href="icon.png">
+
+<!-- Android/PWA用 -->
+<link rel="manifest" href="manifest.json">
+
+<!-- ステータスバー等のテーマカラー -->
+<meta name="theme-color" content="#6da5c0">
+
+<!-- iOSで「ホーム画面に追加」した際、Safariのアドレスバーなどを隠してアプリらしく開く -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ミルク記録">
+
 </head>
 <body>
 <div class="container">
