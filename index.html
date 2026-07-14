@@ -149,12 +149,37 @@
 
     let lastRecordTime = null;
     let allRecords = [];
+    let recordTimeManuallyChanged = false; // ← 追加：ユーザーが手動で時刻を変えたかどうか
 
     window.onload = function() {
         initAmountSelector();
         resetFormTime();
         fetchInitialData();
-        setInterval(updateElapsedTime, 60000); // 1分ごとにタイマー更新
+        loadHistoryData(); // ← 追加：ページ読み込み時に履歴・グラフも先読みしておく
+    
+        document.getElementById('record-time').addEventListener('input', () => {
+            recordTimeManuallyChanged = true;
+        });
+    
+        // 経過時間は1秒ごとに更新(リアルタイムのカウントアップ表示)
+        setInterval(updateElapsedTime, 1000);
+    
+        // 「あげた日時」欄は1分ごとに現在時刻へ自動更新(手動変更していない場合のみ)
+        setInterval(() => {
+            if (!recordTimeManuallyChanged) {
+                resetFormTime();
+            }
+        }, 60000);
+    
+        // 他アプリ等から画面に戻ってきた瞬間に、両方を即座に最新化する
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                updateElapsedTime();
+                if (!recordTimeManuallyChanged) {
+                    resetFormTime();
+                }
+            }
+        });
     };
 
     // ミルク量選択プルダウン（20ml〜240ml）の自動生成。デフォルト100ml
@@ -258,6 +283,7 @@
             await callGasPost('addRecord', record);
             alert('登録しました！');
             document.getElementById('record-memo').value = '';
+            recordTimeManuallyChanged = false; // ← 追加
             resetFormTime();
             fetchInitialData();
         } catch (err) {
