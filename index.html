@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>赤ちゃんミルク記録</title>
+    <style>
+        :root {
+            --primary-color: #6da5c0;
+            --bg-color: #f7f9fa;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --accent-color: #ff8b8b;
+            --border-color: #e2e8f0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); padding: 15px; }
+        .container { max-width: 500px; margin: 0 auto; }
+        h2 { text-align: center; margin-bottom: 15px; font-size: 1.2rem; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .timer-box { text-align: center; background: #eef7f9; border-radius: 12px; padding: 12px; margin-bottom: 20px; border-left: 5px solid var(--primary-color); }
+        .timer-box span { font-weight: bold; color: var(--primary-color); font-size: 1.25rem; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: bold; font-size: 0.9rem; }
+        input[type="datetime-local"] { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; }
+        select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; }
+        .btn { display: block; width: 100%; padding: 14px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; text-align: center; margin-top: 15px; }
+        .btn-danger { background: var(--accent-color); }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-card { background: #fff; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .stat-val { font-size: 1.2rem; font-weight: bold; color: var(--primary-color); margin-top: 5px; }
+        .filter-box { display: flex; gap: 8px; align-items: center; margin-bottom: 15px; }
+        .filter-box select { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.9rem; }
+        .filter-box .btn { width: auto; padding: 10px 15px; margin-top: 0; }
+        .history-list { max-height: 350px; overflow-y: auto; }
+        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-color); }
+        .history-info { display: flex; flex-direction: column; }
+        .history-time { font-weight: bold; font-size: 1.1rem; }
+        .history-date { font-size: 0.75rem; color: #7f8c8d; }
+        .history-amount { font-weight: bold; color: var(--primary-color); font-size: 1.1rem; }
+        .history-actions button { background: none; border: none; margin-left: 10px; cursor: pointer; font-size: 1.1rem; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; padding: 15px; z-index: 1000; }
+        .modal-content { background: white; padding: 20px; border-radius: 16px; width: 100%; max-width: 400px; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 15px; }
+        .modal-buttons .btn { margin-top: 0; }
+        .tabs { display: flex; margin-bottom: 15px; background: #e2e8f0; padding: 4px; border-radius: 8px; }
+        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 0.9rem; }
+        .tab.active { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .page { display: none; }
+        .page.active { display: block; }
+        .loading { text-align: center; padding: 20px; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('record')">記録入力</div>
+        <div class="tab" onclick="switchTab('history')">履歴・分析</div>
+    </div>
+
+    <div id="page-record" class="page active">
+        <div class="card">
+            <div class="timer-box">
+                🍼 前回のミルクから <span id="elapsed-time">計算中...</span> 経過
+            </div>
+            <h2>ミルク記録</h2>
+            <div class="form-group">
+                <label for="record-time">あげた日時（自動で現在時刻）</label>
+                <input type="datetime-local" id="record-time">
+            </div>
+            <div class="form-group">
+                <label for="record-amount">量 (ml)</label>
+                <select id="record-amount"></select>
+            </div>
+            <div class="form-group">
+                <label for="record-memo">メモ</label>
+                <input type="text" id="record-memo" placeholder="少し残した、など" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color); font-size:1rem;">
+            </div>
+            <button class="btn" onclick="submitRecord()">この内容で登録</button>
+        </div>
+    </div>
+
+    <div id="page-history" class="page">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <label>期間内 1日平均量</label>
+                <div class="stat-val" id="stat-avg-amount">- ml</div>
+            </div>
+            <div class="stat-card">
+                <label>平均間隔</label>
+                <div class="stat-val" id="stat-avg-interval">-</div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>履歴一覧</h2>
+            <div class="filter-box">
+                <select id="period-filter" onchange="renderHistory()">
+                    <option value="7" selected>直近1週間</option>
+                    <option value="3">直近3日間</option>
+                    <option value="14">直近2週間</option>
+                    <option value="30">直近1ヶ月</option>
+                </select>
+                <button class="btn" onclick="openAddModal()">＋過去分追加</button>
+            </div>
+            <div id="loading-history" class="loading" style="display:none;">読み込み中...</div>
+            <div class="history-list" id="history-container"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="edit-modal">
+    <div class="modal-content">
+        <h2 id="modal-title">記録の編集</h2>
+        <input type="hidden" id="edit-id">
+        <div class="form-group">
+            <label for="edit-time">日時</label>
+            <input type="datetime-local" id="edit-time">
+        </div>
+        <div class="form-group">
+            <label for="edit-amount">量 (ml)</label>
+            <select id="edit-amount"></select>
+        </div>
+        <div class="form-group">
+            <label for="edit-memo">メモ</label>
+            <input type="text" id="edit-memo" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color); font-size:1rem;">
+        </div>
+        <button class="btn" onclick="saveEdit()">保存する</button>
+        <div class="modal-buttons">
+            <button class="btn btn-danger" id="delete-btn" onclick="deleteRecord()" style="flex:1;">削除</button>
+            <button class="btn" onclick="closeModal()" style="flex:1; background:#95a5a6;">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================================
+    // ここにあなたのGASウェブアプリのURL(/exec で終わるもの)を設定してください
+    // ==========================================================
+    const GAS_URL = 'ここにあなたの/execで終わるURLを貼り付け';
+
+    let lastRecordTime = null;
+    let allRecords = [];
+
+    window.onload = function() {
+        initAmountSelector();
+        resetFormTime();
+        fetchInitialData();
+        setInterval(updateElapsedTime, 60000); // 1分ごとにタイマー更新
+    };
+
+    // ミルク量選択プルダウン（20ml〜240ml）の自動生成。デフォルト100ml
+    function initAmountSelector() {
+        const recordSelect = document.getElementById('record-amount');
+        const modalSelect = document.getElementById('edit-amount');
+        for (let ml = 20; ml <= 240; ml += 10) {
+            const opt1 = document.createElement('option');
+            opt1.value = ml;
+            opt1.innerText = ml + ' ml';
+            if (ml === 100) opt1.selected = true;
+            recordSelect.appendChild(opt1);
+
+            const opt2 = document.createElement('option');
+            opt2.value = ml;
+            opt2.innerText = ml + ' ml';
+            modalSelect.appendChild(opt2);
+        }
+    }
+
+    // 入力フォームの時刻を現在時刻（ローカル）にセット
+    function resetFormTime() {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('record-time').value = now.toISOString().slice(0, 16);
+    }
+
+    // タブ切り替え
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (tabName==='record'&&i===0)||(tabName==='history'&&i===1)));
+        document.getElementById('page-record').classList.toggle('active', tabName === 'record');
+        document.getElementById('page-history').classList.toggle('active', tabName === 'history');
+        if (tabName === 'history') loadHistoryData();
+    }
+
+    // 前回のミルクからの経過時間タイマー更新
+    function updateElapsedTime() {
+        if (!lastRecordTime) {
+            document.getElementById('elapsed-time').innerText = '--時間--分';
+            return;
+        }
+        const diffMs = new Date() - new Date(lastRecordTime);
+        if (diffMs < 0) { document.getElementById('elapsed-time').innerText = '0分'; return; }
+        const diffHrs = Math.floor(diffMs / 3600000);
+        const diffMins = Math.floor((diffMs % 3600000) / 60000);
+        document.getElementById('elapsed-time').innerText = `${diffHrs}時間${diffMins}分`;
+    }
+
+    // GAS呼び出し共通ヘルパー（GET：データ取得系）
+    async function callGasGet(action) {
+        const res = await fetch(`${GAS_URL}?action=${encodeURIComponent(action)}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || '不明なエラー');
+        return json.data;
+    }
+
+    // GAS呼び出し共通ヘルパー（POST：登録・更新・削除系）
+    // Content-Type を text/plain にすることで、ブラウザの余計な
+    // プリフライト(OPTIONS)リクエストを避けて、GASと直接通信できるようにしている
+    async function callGasPost(action, data) {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action, data })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || '不明なエラー');
+        return json;
+    }
+
+    // 初期データの読み込み（タイマー用）
+    async function fetchInitialData() {
+        try {
+            const data = await callGasGet('getRecords');
+            allRecords = data;
+            if (data.length > 0) {
+                lastRecordTime = data[0].timestamp;
+                updateElapsedTime();
+            } else {
+                document.getElementById('elapsed-time').innerText = 'データなし';
+            }
+        } catch (err) {
+            alert('データ取得エラー（初期化時）: ' + err.message);
+        }
+    }
+
+    // 新規登録ボタン押下
+    async function submitRecord() {
+        const timeVal = document.getElementById('record-time').value;
+        const memoVal = document.getElementById('record-memo').value;
+        const amountVal = document.getElementById('record-amount').value;
+        if (!timeVal) return alert('日時を入力してください');
+
+        const record = {
+            timestamp: new Date(timeVal).toISOString(),
+            amount: parseInt(amountVal),
+            memo: memoVal
+        };
+
+        try {
+            await callGasPost('addRecord', record);
+            alert('登録しました！');
+            document.getElementById('record-memo').value = '';
+            resetFormTime();
+            fetchInitialData();
+        } catch (err) {
+            alert('登録エラー: ' + err.message);
+        }
+    }
+
+    // 履歴タブを開いたときのデータ取得
+    async function loadHistoryData() {
+        document.getElementById('loading-history').style.display = 'block';
+        try {
+            const data = await callGasGet('getRecords');
+            allRecords = data;
+            renderHistory();
+        } catch (err) {
+            document.getElementById('loading-history').style.display = 'none';
+            alert('データ取得エラー（履歴読み込み時）: ' + err.message);
+        }
+    }
+
+    // 履歴と分析の描画
+    function renderHistory() {
+        document.getElementById('loading-history').style.display = 'none';
+
+        const filterEl = document.getElementById('period-filter');
+        if (!filterEl) return;
+
+        const days = parseInt(filterEl.value);
+        const container = document.getElementById('history-container');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+
+        // 期間フィルター適用
+        const filtered = allRecords.filter(r => new Date(r.timestamp) >= cutoffDate);
+
+        // 評価（統計）の計算
+        calculateStats(filtered);
+
+        if (filtered.length === 0) {
+            container.innerHTML = '<div class="loading">期間内のデータがありません</div>';
+            return;
+        }
+
+        filtered.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `
+                <div class="history-info">
+                    <span class="history-time">${item.time}</span>
+                    <span class="history-date">${item.date}${item.memo ? ' 💬' + item.memo : ''}</span>
+                </div>
+                <div style="display:flex; align-items:center;">
+                    <span class="history-amount">${item.amount}ml</span>
+                    <div class="history-actions">
+                        <button onclick="openEditModal('${item.id}')">✏️</button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // 平均量・平均間隔の計算
+    function calculateStats(records) {
+        if (records.length === 0) {
+            document.getElementById('stat-avg-amount').innerText = '- ml';
+            document.getElementById('stat-avg-interval').innerText = '-';
+            return;
+        }
+
+        // 1日平均量
+        const dateMap = {};
+        records.forEach(r => {
+            dateMap[r.date] = (dateMap[r.date] || 0) + parseInt(r.amount);
+        });
+        const totalDays = Object.keys(dateMap).length;
+        const totalAmount = Object.values(dateMap).reduce((a,b)=>a+b, 0);
+        document.getElementById('stat-avg-amount').innerText = `${totalDays > 0 ? Math.round(totalAmount / totalDays) : 0} ml`;
+
+        // 平均間隔 (古い順に並び替えて計算)
+        const sorted = [...records].sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+        let totalDiffMs = 0;
+        let count = 0;
+        for (let i = 1; i < sorted.length; i++) {
+            const diff = new Date(sorted[i].timestamp) - new Date(sorted[i-1].timestamp);
+            if (diff > 0 && diff < 24 * 3600000) { // 24時間以上空いた場合は日付の飛びとみなす
+                totalDiffMs += diff;
+                count++;
+            }
+        }
+        if (count > 0) {
+            const avgMs = totalDiffMs / count;
+            const avgHrs = Math.floor(avgMs / 3600000);
+            const avgMins = Math.round((avgMs % 3600000) / 60000);
+            document.getElementById('stat-avg-interval').innerText = `${avgHrs}時間${avgMins}分`;
+        } else {
+            document.getElementById('stat-avg-interval').innerText = '-';
+        }
+    }
+
+    // 編集モーダルを開く
+    function openEditModal(id) {
+        const item = allRecords.find(r => r.id === id);
+        if (!item) return;
+        document.getElementById('modal-title').innerText = "記録の編集";
+        document.getElementById('edit-id').value = item.id;
+        document.getElementById('edit-amount').value = item.amount;
+        document.getElementById('edit-memo').value = item.memo || '';
+        document.getElementById('delete-btn').style.display = 'block';
+
+        const t = new Date(item.timestamp);
+        t.setMinutes(t.getMinutes() - t.getTimezoneOffset());
+        document.getElementById('edit-time').value = t.toISOString().slice(0, 16);
+        document.getElementById('edit-modal').style.display = 'flex';
+    }
+
+    // 過去分追加モーダルを開く
+    function openAddModal() {
+        document.getElementById('modal-title').innerText = "過去の記録を追加";
+        document.getElementById('edit-id').value = '';
+        document.getElementById('edit-amount').value = 100;
+        document.getElementById('edit-memo').value = '';
+        document.getElementById('delete-btn').style.display = 'none';
+
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('edit-time').value = now.toISOString().slice(0, 16);
+        document.getElementById('edit-modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('edit-modal').style.display = 'none';
+    }
+
+    // 編集・追加の保存
+    async function saveEdit() {
+        const id = document.getElementById('edit-id').value;
+        const timeVal = document.getElementById('edit-time').value;
+        const amountVal = document.getElementById('edit-amount').value;
+        const memoVal = document.getElementById('edit-memo').value;
+
+        if (!timeVal) return alert('日時を入力してください');
+
+        const record = {
+            id: id,
+            timestamp: new Date(timeVal).toISOString(),
+            amount: parseInt(amountVal),
+            memo: memoVal
+        };
+
+        try {
+            await callGasPost('saveRecord', record);
+            closeModal();
+            loadHistoryData();
+            fetchInitialData();
+        } catch (err) {
+            alert('保存エラー: ' + err.message);
+        }
+    }
+
+    // 削除
+    async function deleteRecord() {
+        const id = document.getElementById('edit-id').value;
+        if (!id || !confirm('この記録を削除してもよろしいですか？')) return;
+
+        try {
+            await callGasPost('deleteRecord', { id });
+            closeModal();
+            loadHistoryData();
+            fetchInitialData();
+        } catch (err) {
+            alert('削除エラー: ' + err.message);
+        }
+    }
+</script>
+</body>
+</html>
