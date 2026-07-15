@@ -333,7 +333,7 @@
         }
     }
 
-    // 新規登録ボタン押下
+    // 新規登録ボタン押下（楽観的UI：サーバーの応答を待たずに画面を先に更新する）
     async function submitRecord() {
         const timeVal = document.getElementById('record-time').value;
         const memoVal = document.getElementById('record-memo').value;
@@ -346,15 +346,31 @@
             memo: memoVal
         };
 
+        // ← 楽観的UI：通信結果を待たず、画面（タイマー・前回の量・フォーム）を即座に更新
+        lastRecordTime = record.timestamp;
+        lastRecordAmount = record.amount;
+        document.getElementById('last-amount').innerText = `${lastRecordAmount}ml`;
+        updateElapsedTime();
+        document.getElementById('record-memo').value = '';
+        recordTimeManuallyChanged = false;
+        resetFormTime();
+
+        // ← 「登録しました」の表示は実際の通信の完了を待たず、押してから固定で2秒後に出す
+        setTimeout(() => {
+            alert('登録しました！');
+        }, 2000);
+
+        // ← 裏側でGASへの登録を実行。失敗した場合は1回だけ自動で再試行し、それでもダメならエラー表示
         try {
             await callGasPost('addRecord', record);
-            alert('登録しました！');
-            document.getElementById('record-memo').value = '';
-            recordTimeManuallyChanged = false; // ← 追加
-            resetFormTime();
-            fetchInitialData();
+            fetchInitialData(); // 裏で静かに最新状態へ同期（サーバー側のidなどを反映）
         } catch (err) {
-            alert('登録エラー: ' + err.message);
+            try {
+                await callGasPost('addRecord', record); // 1回だけ再試行
+                fetchInitialData();
+            } catch (err2) {
+                alert('登録に失敗しました。お手数ですがもう一度お試しください。（' + err2.message + '）');
+            }
         }
     }
 
