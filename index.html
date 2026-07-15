@@ -86,7 +86,8 @@
     <div id="page-record" class="page active">
         <div class="card">
             <div class="timer-box">
-                🍼 前回のミルクから <span id="elapsed-time">計算中...</span> 経過
+                🍼 前回のミルクから <span id="elapsed-time">計算中...</span> 経過<br>
+                <span style="font-size:0.85rem; color:#7f8c8d;">前回の量: <span id="last-amount">-</span></span>
             </div>
             <h2>ミルク記録</h2>
             <div class="form-group">
@@ -187,6 +188,7 @@
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbwE7zgC9r2-pRuIDQNbeSMHhKb3gHxtEZdmNZD6gcHMSCVo6kl4kSlnbhf_x_EWOPdI/exec';
 
     let lastRecordTime = null;
+    let lastRecordAmount = null; // ← 追加：前回の授乳量
     let chartMode = 'session'; // 'session'(回数ごと) or 'timeofday'(時間帯ごと)
 
     // パステル系カラーパレット
@@ -263,15 +265,30 @@
 
     // 前回のミルクからの経過時間タイマー更新
     function updateElapsedTime() {
+        const elapsedEl = document.getElementById('elapsed-time');
         if (!lastRecordTime) {
-            document.getElementById('elapsed-time').innerText = '--時間--分';
+            elapsedEl.innerText = '--時間--分';
+            elapsedEl.style.color = '';
             return;
         }
         const diffMs = new Date() - new Date(lastRecordTime);
-        if (diffMs < 0) { document.getElementById('elapsed-time').innerText = '0分'; return; }
+        if (diffMs < 0) {
+            elapsedEl.innerText = '0分';
+            elapsedEl.style.color = '';
+            return;
+        }
         const diffHrs = Math.floor(diffMs / 3600000);
         const diffMins = Math.floor((diffMs % 3600000) / 60000);
-        document.getElementById('elapsed-time').innerText = `${diffHrs}時間${diffMins}分`;
+        elapsedEl.innerText = `${diffHrs}時間${diffMins}分`;
+
+        // ← 追加：経過時間に応じて文字色を変える（2時間以上でオレンジ、3時間以上で赤）
+        if (diffMs >= 3 * 3600000) {
+            elapsedEl.style.color = '#e74c3c';
+        } else if (diffMs >= 2 * 3600000) {
+            elapsedEl.style.color = '#f39c12';
+        } else {
+            elapsedEl.style.color = '';
+        }
     }
 
     // GAS呼び出し共通ヘルパー（GET：データ取得系）
@@ -303,8 +320,12 @@
             allRecords = data;
             if (data.length > 0) {
                 lastRecordTime = data[0].timestamp;
+                lastRecordAmount = data[0].amount;
+                document.getElementById('last-amount').innerText = `${lastRecordAmount}ml`;
                 updateElapsedTime();
             } else {
+                lastRecordAmount = null;
+                document.getElementById('last-amount').innerText = '-';
                 document.getElementById('elapsed-time').innerText = 'データなし';
             }
         } catch (err) {
@@ -537,6 +558,22 @@
         }
     }
 
+    // ← 追加：全記録を時系列(古い順)に並べたものを作る（前回との間隔計算に使う）
+    function buildSortedRecordsAsc() {
+        return [...allRecords].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    }
+
+    // ← 追加：指定した記録の「前回の授乳からの間隔」を文字列で返す(日をまたいでも直前の記録を探す)
+    function getIntervalTextFor(record, sortedAsc) {
+        const idx = sortedAsc.findIndex(r => r.id === record.id);
+        if (idx <= 0) return null; // それより前の記録がない
+        const diffMs = new Date(sortedAsc[idx].timestamp) - new Date(sortedAsc[idx - 1].timestamp);
+        if (diffMs <= 0) return null;
+        const hrs = Math.floor(diffMs / 3600000);
+        const mins = Math.floor((diffMs % 3600000) / 60000);
+        return `${hrs}時間${mins}分`;
+    }
+
     // ← 追加：日別詳細モーダルを開く（グラフの棒タップ時に呼ばれる）
     function openDayDetailModal(dayIndex) {
         const d = lastChartDayData[dayIndex];
@@ -558,13 +595,16 @@
 
         totalContainer.innerText = `合計 ${d.total}ml（${d.records.length}回）`;
 
+        const sortedAsc = buildSortedRecordsAsc(); // ← 追加：間隔計算のため時系列順を用意
+
         listContainer.innerHTML = '';
         d.records.forEach(r => {
+            const intervalText = getIntervalTextFor(r, sortedAsc); // ← 追加
             const div = document.createElement('div');
             div.className = 'history-item';
             div.innerHTML = `
                 <div class="history-info">
-                    <span class="history-time">${r.time}</span>
+                    <span class="history-time">${r.time}${intervalText ? ` <span style="font-size:0.75rem; font-weight:normal; color:#7f8c8d;">(前回から${intervalText})</span>` : ''}</span>
                     <span class="history-date">${r.memo ? '💬' + r.memo : ''}</span>
                 </div>
                 <span class="history-amount">${r.amount}ml</span>
