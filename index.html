@@ -54,6 +54,9 @@
         .chart-mode-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
         .mode-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); background: #f0f4f8; font-size: 0.85rem; font-weight: bold; cursor: pointer; }
         .mode-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+        .day-detail-list { max-height: 300px; overflow-y: auto; margin: 10px 0; }
+        .day-detail-total { text-align: center; font-size: 0.9rem; color: #7f8c8d; margin-bottom: 10px; }
+        .day-detail-empty { text-align: center; padding: 20px; color: #7f8c8d; }
     </style>
     <!-- ファビコン -->
 <link rel="icon" type="image/png" href="icon.png">
@@ -122,6 +125,7 @@
             </div>
             <div id="weekly-chart"></div>
             <div id="weekly-chart-legend" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; font-size:0.8rem;"></div>
+            <div style="text-align:center; font-size:0.75rem; color:#7f8c8d; margin-top:8px;">棒をタップするとその日の詳細が見られます</div>
         </div>
         <!-- ↑ ここまで追加 -->
         <div class="card">
@@ -165,6 +169,17 @@
     </div>
 </div>
 
+<!-- ↓ 追加：日別詳細モーダル -->
+<div class="modal" id="day-detail-modal">
+    <div class="modal-content">
+        <h2 id="day-detail-title">日別詳細</h2>
+        <div class="day-detail-total" id="day-detail-total"></div>
+        <div class="day-detail-list" id="day-detail-list"></div>
+        <button class="btn" onclick="closeDayDetailModal()" style="background:#95a5a6;">閉じる</button>
+    </div>
+</div>
+<!-- ↑ 追加ここまで -->
+
 <script>
     // ==========================================================
     // ここにあなたのGASウェブアプリのURL(/exec で終わるもの)を設定してください
@@ -180,6 +195,7 @@
     const timeLabels = ['0:00〜', '6:00〜', '12:00〜', '18:00〜'];
     let allRecords = [];
     let recordTimeManuallyChanged = false; // ← 追加：ユーザーが手動で時刻を変えたかどうか
+    let lastChartDayData = []; // ← 追加：直近描画したグラフの日別データ（タップ時の詳細表示に使う）
 
     window.onload = function() {
         initAmountSelector();
@@ -456,6 +472,9 @@
             const total = records.reduce((sum, r) => sum + Number(r.amount), 0);
             return { dateObj: d, key, records, total };
         });
+
+        // ← 追加：タップ時の詳細表示のために、直近描画分の日別データを保持しておく
+        lastChartDayData = dayData;
     
         const maxTotal = Math.max(...dayData.map(d => d.total), 100);
     
@@ -489,6 +508,11 @@
             const md = `${d.dateObj.getMonth() + 1}/${d.dateObj.getDate()}`;
             const wd = new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', weekday: 'short' }).format(d.dateObj);
             svg += `<text x="${x + barWidth / 2}" y="${height - marginBottom + 14}" font-size="10" text-anchor="middle" fill="#7f8c8d">${md}(${wd})</text>`;
+
+            // ← 追加：その日の棒全体（グラフ上下いっぱい＋左右は棒より少し広め）を覆う透明なタップ領域。
+            // 個々の授乳セグメントを正確に狙わなくても、その日の棒であればどこをタップしても詳細が開く。
+            const tapX = marginLeft + i * barAreaWidth;
+            svg += `<rect x="${tapX}" y="${marginTop}" width="${barAreaWidth}" height="${chartHeight}" fill="transparent" style="cursor:pointer;" onclick="openDayDetailModal(${i})"></rect>`;
         });
     
         svg += `</svg>`;
@@ -511,6 +535,49 @@
             }
             legendContainer.innerHTML = legendHtml;
         }
+    }
+
+    // ← 追加：日別詳細モーダルを開く（グラフの棒タップ時に呼ばれる）
+    function openDayDetailModal(dayIndex) {
+        const d = lastChartDayData[dayIndex];
+        if (!d) return;
+
+        const md = `${d.dateObj.getMonth() + 1}/${d.dateObj.getDate()}`;
+        const wd = new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', weekday: 'short' }).format(d.dateObj);
+        document.getElementById('day-detail-title').innerText = `${md}(${wd})の記録`;
+
+        const listContainer = document.getElementById('day-detail-list');
+        const totalContainer = document.getElementById('day-detail-total');
+
+        if (d.records.length === 0) {
+            totalContainer.innerText = '';
+            listContainer.innerHTML = '<div class="day-detail-empty">この日の記録はありません</div>';
+            document.getElementById('day-detail-modal').style.display = 'flex';
+            return;
+        }
+
+        totalContainer.innerText = `合計 ${d.total}ml（${d.records.length}回）`;
+
+        listContainer.innerHTML = '';
+        d.records.forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `
+                <div class="history-info">
+                    <span class="history-time">${r.time}</span>
+                    <span class="history-date">${r.memo ? '💬' + r.memo : ''}</span>
+                </div>
+                <span class="history-amount">${r.amount}ml</span>
+            `;
+            listContainer.appendChild(div);
+        });
+
+        document.getElementById('day-detail-modal').style.display = 'flex';
+    }
+
+    // ← 追加：日別詳細モーダルを閉じる
+    function closeDayDetailModal() {
+        document.getElementById('day-detail-modal').style.display = 'none';
     }
     
     // 編集モーダルを開く
