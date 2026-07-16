@@ -265,11 +265,17 @@
 
     // タブ切り替え
     function switchTab(tabName) {
-        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (tabName==='record'&&i===0)||(tabName==='history'&&i===1)));
-        document.getElementById('page-record').classList.toggle('active', tabName === 'record');
-        document.getElementById('page-history').classList.toggle('active', tabName === 'history');
-        if (tabName === 'history') loadHistoryData();
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (tabName==='record'&&i===0)||(tabName==='history'&&i===1)));
+    document.getElementById('page-record').classList.toggle('active', tabName === 'record');
+    document.getElementById('page-history').classList.toggle('active', tabName === 'history');
+
+    if (tabName === 'history') {
+        loadHistoryData();
+    } else if (tabName === 'record') {
+        fetchInitialData(); // ← 追加：記録入力タブに切り替えるたびに最新化
     }
+}
+
 
     // 前回のミルクからの経過時間タイマー更新
     function updateElapsedTime() {
