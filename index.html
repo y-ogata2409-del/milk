@@ -221,15 +221,21 @@
             }
         }, 60000);
     
-        // 他アプリ等から画面に戻ってきた瞬間に、両方を即座に最新化する
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                updateElapsedTime();
-                if (!recordTimeManuallyChanged) {
-                    resetFormTime();
-                }
-            }
-        });
+    if (document.visibilityState === 'visible') {
+        fetchInitialData(); // ← 追加：復帰時に必ず最新データを取得し直す
+        updateElapsedTime();
+        if (!recordTimeManuallyChanged) {
+            resetFormTime();
+        }
+        // 履歴タブを開いている最中に復帰した場合は、そちらも更新
+        if (document.getElementById('page-history').classList.contains('active')) {
+            loadHistoryData();
+        }
+    }
+});
+
+        
     };
 
     // ミルク量選択プルダウン（20ml〜240ml）の自動生成。デフォルト100ml
