@@ -186,7 +186,9 @@
     // ここにあなたのGASウェブアプリのURL(/exec で終わるもの)を設定してください
     // ==========================================================
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbwE7zgC9r2-pRuIDQNbeSMHhKb3gHxtEZdmNZD6gcHMSCVo6kl4kSlnbhf_x_EWOPdI/exec';
-
+    const WORKER_URL = 'https://ancient-fog-1b99milk-log-worker.tamago1yen.workers.dev'; // Part Bで控えたURL
+    const DATA_URL = 'https://raw.githubusercontent.com/y-ogata2409-del/milk/main/data.json';
+    
     let lastRecordTime = null;
     let lastRecordAmount = null; // ← 追加：前回の授乳量
     let chartMode = 'session'; // 'session'(回数ごと) or 'timeofday'(時間帯ごと)
@@ -291,6 +293,25 @@
         }
     }
 
+    // 読み込み：GitHub上のJSONファイルを直接取得(高速・キャッシュ回避のためtパラメータ付き)
+    async function fetchRecordsFromGitHub() {
+        const res = await fetch(`${DATA_URL}?t=${Date.now()}`);
+        if (!res.ok) throw new Error('データ取得に失敗しました: ' + res.status);
+        return res.json();
+    }
+    
+    // 書き込み：Cloudflare Worker経由でGitHubを更新
+    async function callWorkerPost(action, data) {
+        const res = await fetch(WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, data })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || '不明なエラー');
+        return json;
+    }
+    
     // GAS呼び出し共通ヘルパー（GET：データ取得系）
     async function callGasGet(action) {
         const res = await fetch(`${GAS_URL}?action=${encodeURIComponent(action)}`);
@@ -316,7 +337,7 @@
     // 初期データの読み込み（タイマー用）
     async function fetchInitialData() {
         try {
-            const data = await callGasGet('getRecords');
+            const data = await fetchRecordsFromGitHub();
             allRecords = data;
             if (data.length > 0) {
                 lastRecordTime = data[0].timestamp;
@@ -362,7 +383,7 @@
 
         // ← 裏側でGASへの登録を実行。失敗した場合は1回だけ自動で再試行し、それでもダメならエラー表示
         try {
-            await callGasPost('addRecord', record);
+            await callWorkerPost('addRecord', record);     // ← callGasPost('addRecord', record) から変更
             fetchInitialData(); // 裏で静かに最新状態へ同期（サーバー側のidなどを反映）
         } catch (err) {
             try {
@@ -378,7 +399,7 @@
     async function loadHistoryData() {
         document.getElementById('loading-history').style.display = 'block';
         try {
-            const data = await callGasGet('getRecords');
+            const data = await fetchRecordsFromGitHub();   // ← 同上
             allRecords = data;
             renderHistory();
         } catch (err) {
@@ -687,7 +708,7 @@
         };
 
         try {
-            await callGasPost('saveRecord', record);
+            await callWorkerPost('saveRecord', record);    // ← 同上
             closeModal();
             loadHistoryData();
             fetchInitialData();
@@ -702,7 +723,7 @@
         if (!id || !confirm('この記録を削除してもよろしいですか？')) return;
 
         try {
-            await callGasPost('deleteRecord', { id });
+            await callWorkerPost('deleteRecord', { id });  // ← 同上
             closeModal();
             loadHistoryData();
             fetchInitialData();
