@@ -404,16 +404,15 @@
 
     // 履歴タブを開いたときのデータ取得
     async function loadHistoryData() {
-        document.getElementById('loading-history').style.display = 'block';
-        try {
-            const data = await fetchRecordsFromGitHub();   // ← 同上
-            allRecords = data;
-            renderHistory();
-        } catch (err) {
-            document.getElementById('loading-history').style.display = 'none';
-            alert('データ取得エラー（履歴読み込み時）: ' + err.message);
-        }
+    try {
+        const data = await fetchRecordsFromGitHub();
+        allRecords = data;
+        renderHistory();
+    } catch (err) {
+        alert('データ取得エラー（履歴読み込み時）: ' + err.message);
     }
+}
+
 
     // 履歴と分析の描画
     function renderHistory() {
