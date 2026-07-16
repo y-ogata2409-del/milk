@@ -747,6 +747,15 @@
         }
         return sessionPalette[sessionIndex % sessionPalette.length];
     }
+    function jsonResponse(obj, status, corsHeaders) {
+      return new Response(JSON.stringify(obj), {
+        status: status,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        }
+      });
+    }
 </script>
 </body>
 </html>
