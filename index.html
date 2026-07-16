@@ -370,37 +370,46 @@
         }
     }
 
-    // 新規登録ボタン押下
-    async function submitRecord() {
-        const timeVal = document.getElementById('record-time').value;
-        const memoVal = document.getElementById('record-memo').value;
-        const amountVal = document.getElementById('record-amount').value;
-        if (!timeVal) return alert('日時を入力してください');
-    
-        const record = {
-            timestamp: new Date(timeVal).toISOString(),
-            amount: parseInt(amountVal),
-            memo: memoVal
-        };
-    
-        try {
-            await callWorkerPost('addRecord', record);
-    
-            // 書き込み成功後、画面を更新してすぐにアラート表示
-            lastRecordTime = record.timestamp;
-            lastRecordAmount = record.amount;
-            document.getElementById('last-amount').innerText = `${lastRecordAmount}ml`;
-            updateElapsedTime();
-            document.getElementById('record-memo').value = '';
-            recordTimeManuallyChanged = false;
-            resetFormTime();
-            alert('登録しました！');
-    
-            fetchInitialData(); // 裏で最新状態に同期
-        } catch (err) {
-            alert('登録に失敗しました。お手数ですがもう一度お試しください。（' + err.message + '）');
-        }
+    // 新規登録ボタン
+async function submitRecord() {
+    const timeVal = document.getElementById('record-time').value;
+    const memoVal = document.getElementById('record-memo').value;
+    const amountVal = document.getElementById('record-amount').value;
+    if (!timeVal) return alert('日時を入力してください');
+
+    const record = {
+        timestamp: new Date(timeVal).toISOString(),
+        amount: parseInt(amountVal),
+        memo: memoVal
+    };
+
+    // ← 追加：ボタンを無効化して連打を防ぐ
+    const submitBtn = document.querySelector('#page-record .btn');
+    submitBtn.disabled = true;
+    submitBtn.innerText = '登録中...';
+
+    try {
+        await callWorkerPost('addRecord', record);
+
+        lastRecordTime = record.timestamp;
+        lastRecordAmount = record.amount;
+        document.getElementById('last-amount').innerText = `${lastRecordAmount}ml`;
+        updateElapsedTime();
+        document.getElementById('record-memo').value = '';
+        recordTimeManuallyChanged = false;
+        resetFormTime();
+        alert('登録しました！');
+
+        fetchInitialData();
+    } catch (err) {
+        alert('登録に失敗しました。お手数ですがもう一度お試しください。（' + err.message + '）');
+    } finally {
+        // ← 追加：成功・失敗どちらでも必ずボタンを元に戻す
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'この内容で登録';
     }
+}
+
 
     // 履歴タブを開いたときのデータ取得
     async function loadHistoryData() {
