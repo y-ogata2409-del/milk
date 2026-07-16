@@ -293,11 +293,12 @@
         }
     }
 
-    // 読み込み：GitHub上のJSONファイルを直接取得(高速・キャッシュ回避のためtパラメータ付き)
+    // 読み込み：Cloudflare Worker経由でGitHubの最新データを取得(キャッシュの遅延なし)
     async function fetchRecordsFromGitHub() {
-        const res = await fetch(`${DATA_URL}?t=${Date.now()}`);
-        if (!res.ok) throw new Error('データ取得に失敗しました: ' + res.status);
-        return res.json();
+        const res = await fetch(`${WORKER_URL}?action=getRecords&t=${Date.now()}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'データ取得に失敗しました');
+        return json.data;
     }
     
     // 書き込み：Cloudflare Worker経由でGitHubを更新
