@@ -57,6 +57,12 @@
         .day-detail-list { max-height: 300px; overflow-y: auto; margin: 10px 0; }
         .day-detail-total { text-align: center; font-size: 0.9rem; color: #7f8c8d; margin-bottom: 10px; }
         .day-detail-empty { text-align: center; padding: 20px; color: #7f8c8d; }
+        .memo-date-header { font-weight: bold; font-size: 0.85rem; color: #7f8c8d; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border-color); }
+        .memo-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--border-color); }
+        .memo-checkbox-label input { width: 20px; height: 20px; margin-top: 2px; }
+        .memo-content { flex: 1; font-size: 0.95rem; line-height: 1.4; }
+        .memo-transcribed .memo-content { text-decoration: line-through; color: #b0b8bd; }
+        .memo-actions button { background: none; border: none; cursor: pointer; font-size: 1.05rem; }
     </style>
     <!-- ファビコン -->
 <link rel="icon" type="image/png" href="icon.png">
@@ -81,6 +87,7 @@
     <div class="tabs">
         <div class="tab active" onclick="switchTab('record')">記録入力</div>
         <div class="tab" onclick="switchTab('history')">履歴・分析</div>
+        <div class="tab" onclick="switchTab('memo')">育児メモ</div>
     </div>
 
     <div id="page-record" class="page active">
@@ -144,6 +151,28 @@
             <div class="history-list" id="history-container"></div>
         </div>
     </div>
+    <div id="page-memo" class="page">
+        <div class="card">
+            <h2>育児メモを追加</h2>
+            <div class="form-group">
+                <label for="memo-date">気づいた日</label>
+                <input type="date" id="memo-date">
+            </div>
+            <div class="form-group">
+                <label for="memo-content">内容</label>
+                <input type="text" id="memo-content" placeholder="例：追視するようになった" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color); font-size:1rem;">
+            </div>
+            <button class="btn" id="memo-submit-btn" onclick="submitMemo()">メモを登録</button>
+        </div>
+        <div class="card">
+            <h2>メモ一覧（母子手帳への転記用）</h2>
+            <div class="chart-mode-toggle">
+                <button id="memo-filter-untranscribed" class="mode-btn active" onclick="setMemoFilter('untranscribed')">未転記のみ</button>
+                <button id="memo-filter-all" class="mode-btn" onclick="setMemoFilter('all')">すべて</button>
+            </div>
+            <div id="memo-list-container"></div>
+        </div>
+    </div>
 </div>
 
 <div class="modal" id="edit-modal">
@@ -179,6 +208,25 @@
         <button class="btn" onclick="closeDayDetailModal()" style="background:#95a5a6;">閉じる</button>
     </div>
 </div>
+<div class="modal" id="memo-edit-modal">
+    <div class="modal-content">
+        <h2>メモの編集</h2>
+        <input type="hidden" id="memo-edit-id">
+        <div class="form-group">
+            <label for="memo-edit-date">気づいた日</label>
+            <input type="date" id="memo-edit-date">
+        </div>
+        <div class="form-group">
+            <label for="memo-edit-content">内容</label>
+            <input type="text" id="memo-edit-content" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color); font-size:1rem;">
+        </div>
+        <button class="btn" onclick="saveMemoEdit()">保存する</button>
+        <div class="modal-buttons">
+            <button class="btn btn-danger" onclick="deleteMemoConfirm()" style="flex:1;">削除</button>
+            <button class="btn" onclick="closeMemoEditModal()" style="flex:1; background:#95a5a6;">閉じる</button>
+        </div>
+    </div>
+</div>
 <!-- ↑ 追加ここまで -->
 
 <script>
@@ -198,12 +246,21 @@
     const timePalette = ['#b3bce0', '#ffb3ba', '#ffdba8', '#d9b8e0']; // 0時〜, 6時〜, 12時〜, 18時〜
     const timeLabels = ['0:00〜', '6:00〜', '12:00〜', '18:00〜'];
     let allRecords = [];
+    function isMilk(r) { return !r.type || r.type === 'milk'; }
+    function isMemo(r) { return r.type === 'memo'; }
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.innerText = str;
+        return div.innerHTML;
+    }
+    let memoFilterMode = 'untranscribed';
     let recordTimeManuallyChanged = false; // ← 追加：ユーザーが手動で時刻を変えたかどうか
     let lastChartDayData = []; // ← 追加：直近描画したグラフの日別データ（タップ時の詳細表示に使う）
 
     window.onload = function() {
         initAmountSelector();
         resetFormTime();
+        resetMemoDate(); // ← 追加
         fetchInitialData();
         loadHistoryData(); // ← 追加：ページ読み込み時に履歴・グラフも先読みしておく
     
@@ -265,16 +322,20 @@
 
     // タブ切り替え
     function switchTab(tabName) {
-    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (tabName==='record'&&i===0)||(tabName==='history'&&i===1)));
-    document.getElementById('page-record').classList.toggle('active', tabName === 'record');
-    document.getElementById('page-history').classList.toggle('active', tabName === 'history');
-
-    if (tabName === 'history') {
-        loadHistoryData();
-    } else if (tabName === 'record') {
-        fetchInitialData(); // ← 追加：記録入力タブに切り替えるたびに最新化
+        const order = ['record', 'history', 'memo'];
+        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', order[i] === tabName));
+        document.getElementById('page-record').classList.toggle('active', tabName === 'record');
+        document.getElementById('page-history').classList.toggle('active', tabName === 'history');
+        document.getElementById('page-memo').classList.toggle('active', tabName === 'memo');
+    
+        if (tabName === 'history') {
+            loadHistoryData();
+        } else if (tabName === 'record') {
+            fetchInitialData();
+        } else if (tabName === 'memo') {
+            loadMemoData();
+        }
     }
-}
 
 
     // 前回のミルクからの経過時間タイマー更新
@@ -355,9 +416,10 @@
         try {
             const data = await fetchRecordsFromGitHub();
             allRecords = data;
-            if (data.length > 0) {
-                lastRecordTime = data[0].timestamp;
-                lastRecordAmount = data[0].amount;
+            const milkRecords = data.filter(isMilk); // ← 追加
+            if (milkRecords.length > 0) {
+                lastRecordTime = milkRecords[0].timestamp;
+                lastRecordAmount = milkRecords[0].amount;
                 document.getElementById('last-amount').innerText = `${lastRecordAmount}ml`;
                 updateElapsedTime();
             } else {
@@ -440,7 +502,7 @@ async function submitRecord() {
         cutoffDate.setDate(cutoffDate.getDate() - days);
 
         // 期間フィルター適用
-        const filtered = allRecords.filter(r => new Date(r.timestamp) >= cutoffDate);
+        const filtered = allRecords.filter(r => isMilk(r) && new Date(r.timestamp) >= cutoffDate); // ← isMilk(r) && を追加
 
         // 評価（統計）の計算
         calculateStats(filtered);
@@ -533,7 +595,7 @@ async function submitRecord() {
     
         // 日付ごとに記録をグルーピング(同日内は時刻の早い順)
         const byDay = {};
-        allRecords.forEach(r => {
+        allRecords.filter(isMilk).forEach(r => {  // ← .filter(isMilk)を追加
             if (!byDay[r.date]) byDay[r.date] = [];
             byDay[r.date].push(r);
         });
@@ -612,7 +674,7 @@ async function submitRecord() {
 
     // ← 追加：全記録を時系列(古い順)に並べたものを作る（前回との間隔計算に使う）
     function buildSortedRecordsAsc() {
-        return [...allRecords].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        return allRecords.filter(isMilk).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)); // ← .filter(isMilk)を追加
     }
 
     // ← 追加：指定した記録の「前回の授乳からの間隔」を文字列で返す(日をまたいでも直前の記録を探す)
@@ -770,6 +832,157 @@ async function submitRecord() {
             return timePalette[bucket];
         }
         return sessionPalette[sessionIndex % sessionPalette.length];
+    }
+    // 「気づいた日」欄の初期値を今日(JST)にセット
+    function resetMemoDate() {
+        const el = document.getElementById('memo-date');
+        if (!el) return;
+        el.value = jstDateStr(new Date()).replaceAll('/', '-');
+    }
+    
+    // 育児メモタブのデータ読み込み
+    async function loadMemoData() {
+        try {
+            const data = await fetchRecordsFromGitHub();
+            allRecords = data;
+            renderMemoList();
+        } catch (err) {
+            alert('データ取得エラー（メモ読み込み時）: ' + err.message);
+        }
+    }
+    
+    // フィルター切り替え(未転記のみ/すべて)
+    function setMemoFilter(mode) {
+        memoFilterMode = mode;
+        document.getElementById('memo-filter-untranscribed').classList.toggle('active', mode === 'untranscribed');
+        document.getElementById('memo-filter-all').classList.toggle('active', mode === 'all');
+        renderMemoList();
+    }
+    
+    // メモ一覧の描画(日付ごとに見出しを分ける)
+    function renderMemoList() {
+        const onlyUntranscribed = memoFilterMode === 'untranscribed';
+        let memos = allRecords.filter(isMemo);
+        if (onlyUntranscribed) memos = memos.filter(m => !m.transcribed);
+    
+        // 日付の新しい順。同じ日付内はid(作成順)の新しい順
+        memos.sort((a, b) => {
+            if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+            return a.id < b.id ? 1 : -1;
+        });
+    
+        const container = document.getElementById('memo-list-container');
+        container.innerHTML = '';
+    
+        if (memos.length === 0) {
+            container.innerHTML = `<div class="loading">${onlyUntranscribed ? '未転記のメモはありません' : 'メモがありません'}</div>`;
+            return;
+        }
+    
+        let currentDate = null;
+        memos.forEach(m => {
+            if (m.date !== currentDate) {
+                currentDate = m.date;
+                const header = document.createElement('div');
+                header.className = 'memo-date-header';
+                header.innerText = currentDate;
+                container.appendChild(header);
+            }
+            const div = document.createElement('div');
+            div.className = 'memo-item' + (m.transcribed ? ' memo-transcribed' : '');
+            div.innerHTML = `
+                <label class="memo-checkbox-label">
+                    <input type="checkbox" ${m.transcribed ? 'checked' : ''} onchange="toggleMemoTranscribed('${m.id}', this.checked)">
+                </label>
+                <div class="memo-content">${escapeHtml(m.content)}</div>
+                <div class="memo-actions">
+                    <button onclick="openMemoEditModal('${m.id}')">✏️</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+    
+    // 新規メモの登録
+    async function submitMemo() {
+        const dateVal = document.getElementById('memo-date').value;
+        const contentVal = document.getElementById('memo-content').value.trim();
+        if (!dateVal) return alert('日付を入力してください');
+        if (!contentVal) return alert('内容を入力してください');
+    
+        const submitBtn = document.getElementById('memo-submit-btn');
+        submitBtn.disabled = true;
+        submitBtn.innerText = '登録中...';
+    
+        try {
+            await callWorkerPost('addMemo', { date: dateVal.replaceAll('-', '/'), content: contentVal });
+            document.getElementById('memo-content').value = '';
+            alert('メモを登録しました！');
+            await loadMemoData();
+        } catch (err) {
+            alert('登録に失敗しました。（' + err.message + '）');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'メモを登録';
+        }
+    }
+    
+    // 「転記済み」チェックボックスの切り替え
+    async function toggleMemoTranscribed(id, checked) {
+        const memo = allRecords.find(r => r.id === id && isMemo(r));
+        if (!memo) return;
+        try {
+            await callWorkerPost('saveMemo', { id: memo.id, date: memo.date, content: memo.content, transcribed: checked });
+            memo.transcribed = checked;
+            renderMemoList();
+        } catch (err) {
+            alert('更新に失敗しました。（' + err.message + '）');
+            renderMemoList();
+        }
+    }
+    
+    // メモ編集モーダル
+    function openMemoEditModal(id) {
+        const m = allRecords.find(r => r.id === id && isMemo(r));
+        if (!m) return;
+        document.getElementById('memo-edit-id').value = m.id;
+        document.getElementById('memo-edit-date').value = m.date.replaceAll('/', '-');
+        document.getElementById('memo-edit-content').value = m.content;
+        document.getElementById('memo-edit-modal').style.display = 'flex';
+    }
+    function closeMemoEditModal() {
+        document.getElementById('memo-edit-modal').style.display = 'none';
+    }
+    async function saveMemoEdit() {
+        const id = document.getElementById('memo-edit-id').value;
+        const dateVal = document.getElementById('memo-edit-date').value;
+        const contentVal = document.getElementById('memo-edit-content').value.trim();
+        if (!dateVal || !contentVal) return alert('日付と内容を入力してください');
+    
+        const existing = allRecords.find(r => r.id === id);
+        try {
+            await callWorkerPost('saveMemo', {
+                id,
+                date: dateVal.replaceAll('-', '/'),
+                content: contentVal,
+                transcribed: existing ? existing.transcribed : false
+            });
+            closeMemoEditModal();
+            await loadMemoData();
+        } catch (err) {
+            alert('保存エラー: ' + err.message);
+        }
+    }
+    async function deleteMemoConfirm() {
+        const id = document.getElementById('memo-edit-id').value;
+        if (!confirm('このメモを削除してもよろしいですか？')) return;
+        try {
+            await callWorkerPost('deleteMemo', { id });
+            closeMemoEditModal();
+            await loadMemoData();
+        } catch (err) {
+            alert('削除エラー: ' + err.message);
+        }
     }
 </script>
 </body>
