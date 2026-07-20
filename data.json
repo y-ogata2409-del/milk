@@ -414,12 +414,5 @@
     "timestamp": "2026-07-20T17:49:00.000Z",
     "amount": 80,
     "memo": ""
-  },
-  {
-    "type": "memo",
-    "id": "memo_1784583405109_c0a9wy",
-    "date": "2026/07/21",
-    "content": "てすと",
-    "transcribed": true
   }
 ]
