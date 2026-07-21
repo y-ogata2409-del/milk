@@ -423,5 +423,12 @@
     "timestamp": "2026-07-20T21:35:00.000Z",
     "amount": 50,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1784593219783_67697l",
+    "date": "2026/07/21",
+    "content": "あ",
+    "transcribed": false
   }
 ]
