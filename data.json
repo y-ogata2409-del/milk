@@ -477,5 +477,12 @@
     "timestamp": "2026-07-21T19:08:00.000Z",
     "amount": 70,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1784665340990_v67gyb",
+    "date": "2026/07/22",
+    "content": "てすと",
+    "transcribed": false
   }
 ]
