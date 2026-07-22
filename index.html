@@ -534,41 +534,46 @@ async function submitRecord() {
 
     // 平均量・平均間隔の計算
     function calculateStats(records) {
-        if (records.length === 0) {
-            document.getElementById('stat-avg-amount').innerText = '- ml';
-            document.getElementById('stat-avg-interval').innerText = '-';
-            return;
-        }
+    if (records.length === 0) {
+        document.getElementById('stat-avg-amount').innerText = '- ml';
+        document.getElementById('stat-avg-interval').innerText = '-';
+        return;
+    }
 
-        // 1日平均量
-        const dateMap = {};
-        records.forEach(r => {
-            dateMap[r.date] = (dateMap[r.date] || 0) + parseInt(r.amount);
-        });
-        const totalDays = Object.keys(dateMap).length;
-        const totalAmount = Object.values(dateMap).reduce((a,b)=>a+b, 0);
-        document.getElementById('stat-avg-amount').innerText = `${totalDays > 0 ? Math.round(totalAmount / totalDays) : 0} ml`;
+    // ← 追加：今日(JST)の日付を取得し、平均量の計算からは除外する(今日はまだ完了していない一日のため)
+    const todayStr = jstDateStr(new Date());
+    const completeDayRecords = records.filter(r => r.date !== todayStr);
 
-        // 平均間隔 (古い順に並び替えて計算)
-        const sorted = [...records].sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
-        let totalDiffMs = 0;
-        let count = 0;
-        for (let i = 1; i < sorted.length; i++) {
-            const diff = new Date(sorted[i].timestamp) - new Date(sorted[i-1].timestamp);
-            if (diff > 0 && diff < 24 * 3600000) { // 24時間以上空いた場合は日付の飛びとみなす
-                totalDiffMs += diff;
-                count++;
-            }
-        }
-        if (count > 0) {
-            const avgMs = totalDiffMs / count;
-            const avgHrs = Math.floor(avgMs / 3600000);
-            const avgMins = Math.round((avgMs % 3600000) / 60000);
-            document.getElementById('stat-avg-interval').innerText = `${avgHrs}時間${avgMins}分`;
-        } else {
-            document.getElementById('stat-avg-interval').innerText = '-';
+    // 1日平均量(昨日までの、完了した日だけで計算)
+    const dateMap = {};
+    completeDayRecords.forEach(r => {
+        dateMap[r.date] = (dateMap[r.date] || 0) + parseInt(r.amount);
+    });
+    const totalDays = Object.keys(dateMap).length;
+    const totalAmount = Object.values(dateMap).reduce((a,b)=>a+b, 0);
+    document.getElementById('stat-avg-amount').innerText = totalDays > 0 ? `${Math.round(totalAmount / totalDays)} ml` : '- ml';
+
+    // 平均間隔(今まで通り、当日の記録も含めて計算)
+    const sorted = [...records].sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+    let totalDiffMs = 0;
+    let count = 0;
+    for (let i = 1; i < sorted.length; i++) {
+        const diff = new Date(sorted[i].timestamp) - new Date(sorted[i-1].timestamp);
+        if (diff > 0 && diff < 24 * 3600000) {
+            totalDiffMs += diff;
+            count++;
         }
     }
+    if (count > 0) {
+        const avgMs = totalDiffMs / count;
+        const avgHrs = Math.floor(avgMs / 3600000);
+        const avgMins = Math.round((avgMs % 3600000) / 60000);
+        document.getElementById('stat-avg-interval').innerText = `${avgHrs}時間${avgMins}分`;
+    } else {
+        document.getElementById('stat-avg-interval').innerText = '-';
+    }
+}
+
 
     // JST(日本時間)基準の "yyyy/MM/dd" 文字列を作る(サーバー側のdateフィールドと形式を合わせるため)
     function jstDateStr(date) {
