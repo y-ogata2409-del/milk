@@ -630,5 +630,12 @@
     "timestamp": "2026-07-23T23:30:00.000Z",
     "amount": 100,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1784855150663_bick7u",
+    "date": "2026/07/24",
+    "content": "かみや受診した",
+    "transcribed": false
   }
 ]
