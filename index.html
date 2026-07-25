@@ -277,20 +277,17 @@
                 resetFormTime();
             }
         }, 1000);
-    
-        document.addEventListener('visibilitychange', () => {
+
+document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-        fetchInitialData(); // ← 追加：復帰時に必ず最新データを取得し直す
+        switchTab('record'); // ← 追加：他アプリ等から戻ってきたら、常に「記録入力」タブを表示する
         updateElapsedTime();
         if (!recordTimeManuallyChanged) {
             resetFormTime();
         }
-        // 履歴タブを開いている最中に復帰した場合は、そちらも更新
-        if (document.getElementById('page-history').classList.contains('active')) {
-            loadHistoryData();
-        }
     }
 });
+
 
         
     };
