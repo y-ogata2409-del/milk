@@ -85,9 +85,10 @@
 <body>
 <div class="container">
     <div class="tabs">
-        <div class="tab active" onclick="switchTab('record')">記録入力</div>
-        <div class="tab" onclick="switchTab('history')">履歴・分析</div>
+        <div class="tab active" onclick="switchTab('record')">記録</div>
+        <div class="tab" onclick="switchTab('history')">履歴</div>
         <div class="tab" onclick="switchTab('memo')">育児メモ</div>
+        <div class="tab" onclick="switchTab('line')">LINE</div>
     </div>
 
     <div id="page-record" class="page active">
@@ -171,6 +172,31 @@
                 <button id="memo-filter-all" class="mode-btn" onclick="setMemoFilter('all')">すべて</button>
             </div>
             <div id="memo-list-container"></div>
+        </div>
+    </div>
+    <div id="page-line" class="page">
+        <div class="card">
+            <h2>LINEボタンの量設定</h2>
+            <div id="line-amount-list"></div>
+            <div class="form-group" style="display:flex; gap:8px; margin-top:10px;">
+                <input type="number" id="line-new-amount" placeholder="例：160" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border-color);">
+                <button class="btn" style="width:auto; margin-top:0; padding:10px 16px;" onclick="addLineAmount()">追加</button>
+            </div>
+        </div>
+        <div class="card">
+            <h2>通知設定</h2>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="notify-enabled" style="width:auto; margin-right:6px;">
+                    経過通知を有効にする
+                </label>
+            </div>
+            <div class="form-group">
+                <label for="notify-minutes">何分経過したら通知するか</label>
+                <input type="number" id="notify-minutes" placeholder="例：180" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+            </div>
+            <button class="btn" onclick="saveLineConfig()">設定を保存</button>
+            <div id="line-config-status" style="text-align:center; font-size:0.85rem; color:#7f8c8d; margin-top:8px;"></div>
         </div>
     </div>
 </div>
@@ -318,12 +344,14 @@ document.addEventListener('visibilitychange', () => {
     }
 
     // タブ切り替え
+    // 既存のswitchTab関数を、以下の内容に置き換え
     function switchTab(tabName) {
-        const order = ['record', 'history', 'memo'];
+        const order = ['record', 'history', 'memo', 'line'];
         document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', order[i] === tabName));
         document.getElementById('page-record').classList.toggle('active', tabName === 'record');
         document.getElementById('page-history').classList.toggle('active', tabName === 'history');
         document.getElementById('page-memo').classList.toggle('active', tabName === 'memo');
+        document.getElementById('page-line').classList.toggle('active', tabName === 'line');
     
         if (tabName === 'history') {
             loadHistoryData();
@@ -331,6 +359,8 @@ document.addEventListener('visibilitychange', () => {
             fetchInitialData();
         } else if (tabName === 'memo') {
             loadMemoData();
+        } else if (tabName === 'line') {
+            loadLineConfig();
         }
     }
 
@@ -986,6 +1016,80 @@ async function submitRecord() {
             alert('削除エラー: ' + err.message);
         }
     }
+    
+// ==========================================================
+// LINE設定タブ
+// ==========================================================
+let currentLineConfig = { buttonAmounts: [], notifyEnabled: true, notifyMinutes: 180 };
+
+async function loadLineConfig() {
+    try {
+        const res = await fetch(`${WORKER_URL}?target=config&t=${Date.now()}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || '設定の取得に失敗しました');
+        currentLineConfig = json.data;
+
+        document.getElementById('notify-enabled').checked = !!currentLineConfig.notifyEnabled;
+        document.getElementById('notify-minutes').value = currentLineConfig.notifyMinutes || 180;
+        renderLineAmountList();
+    } catch (err) {
+        alert('設定の読み込みに失敗しました: ' + err.message);
+    }
+}
+
+function renderLineAmountList() {
+    const container = document.getElementById('line-amount-list');
+    container.innerHTML = '';
+    currentLineConfig.buttonAmounts.forEach((amount, index) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-color);';
+        row.innerHTML = `
+            <span style="font-weight:bold;">${amount} ml</span>
+            <button onclick="removeLineAmount(${index})" style="background:none; border:none; color:var(--accent-color); font-size:1.1rem; cursor:pointer;">✕</button>
+        `;
+        container.appendChild(row);
+    });
+}
+
+function addLineAmount() {
+    const input = document.getElementById('line-new-amount');
+    const value = parseInt(input.value, 10);
+    if (!value || value <= 0) return alert('正しい数値を入力してください');
+    if (currentLineConfig.buttonAmounts.includes(value)) return alert('すでに追加されている量です');
+
+    currentLineConfig.buttonAmounts.push(value);
+    currentLineConfig.buttonAmounts.sort((a, b) => a - b);
+    input.value = '';
+    renderLineAmountList();
+}
+
+function removeLineAmount(index) {
+    currentLineConfig.buttonAmounts.splice(index, 1);
+    renderLineAmountList();
+}
+
+async function saveLineConfig() {
+    currentLineConfig.notifyEnabled = document.getElementById('notify-enabled').checked;
+    currentLineConfig.notifyMinutes = parseInt(document.getElementById('notify-minutes').value, 10) || 180;
+
+    const statusEl = document.getElementById('line-config-status');
+    statusEl.innerText = '保存中...';
+
+    try {
+        const res = await fetch(WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'saveConfig', data: currentLineConfig })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || '保存に失敗しました');
+        statusEl.innerText = '保存しました！';
+        setTimeout(() => { statusEl.innerText = ''; }, 2000);
+    } catch (err) {
+        statusEl.innerText = '';
+        alert('保存エラー: ' + err.message);
+    }
+}
 </script>
 </body>
 </html>
