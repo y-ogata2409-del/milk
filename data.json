@@ -1294,5 +1294,12 @@
     "timestamp": "2026-08-02T21:24:00.000Z",
     "amount": 120,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1785708918565_pqo1dg",
+    "date": "2026/08/02",
+    "content": "便秘だったがうんこいっぱいでた",
+    "transcribed": false
   }
 ]
