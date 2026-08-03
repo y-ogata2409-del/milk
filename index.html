@@ -133,8 +133,9 @@
                 <button id="mode-btn-time" class="mode-btn" onclick="setChartMode('timeofday')">時間帯ごと</button>
             </div>
             <div id="weekly-chart"></div>
+            <div id="weekly-chart-period" style="text-align:center; font-size:0.85rem; color:#7f8c8d; margin-top:6px; font-weight:bold;"></div>
             <div id="weekly-chart-legend" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; font-size:0.8rem;"></div>
-            <div style="text-align:center; font-size:0.75rem; color:#7f8c8d; margin-top:8px;">棒をタップするとその日の詳細が見られます</div>
+            <div style="text-align:center; font-size:0.75rem; color:#7f8c8d; margin-top:8px;">左右にスワイプすると過去の週も見られます</div>
         </div>
         <!-- ↑ ここまで追加 -->
         <div class="card">
@@ -266,6 +267,7 @@
     let lastRecordTime = null;
     let lastRecordAmount = null; // ← 追加：前回の授乳量
     let chartMode = 'session'; // 'session'(回数ごと) or 'timeofday'(時間帯ごと)
+    let chartWeekOffset = 0; // 0=直近7日間、1=1週間前、2=2週間前...
 
     // パステル系カラーパレット
     const sessionPalette = ['#a8d8ea', '#ffb3ba', '#ffe4a3', '#b5e7c8', '#d4b3e0', '#ffcda3', '#a3e0d0', '#e0b3d4'];
@@ -289,6 +291,7 @@
         resetMemoDate(); // ← 追加
         fetchInitialData();
         loadHistoryData(); // ← 追加：ページ読み込み時に履歴・グラフも先読みしておく
+        setupChartSwipe(); // ← 追加
     
         document.getElementById('record-time').addEventListener('input', () => {
             recordTimeManuallyChanged = true;
@@ -354,6 +357,7 @@ document.addEventListener('visibilitychange', () => {
         document.getElementById('page-line').classList.toggle('active', tabName === 'line');
     
         if (tabName === 'history') {
+            chartWeekOffset = 0; // ← 追加：履歴タブを開くたびに直近7日間に戻す
             loadHistoryData();
         } else if (tabName === 'record') {
             fetchInitialData();
@@ -618,11 +622,26 @@ async function submitRecord() {
         const legendContainer = document.getElementById('weekly-chart-legend');
         if (!container) return;
     
-        // 直近7日分の日付キー(今日を含む)を作成
+        // 変更前
+        // const days = [];
+        // for (let i = 6; i >= 0; i--) {
+        //     const d = new Date(Date.now() - i * 86400000);
+        //     days.push(d);
+        // }
+        
+        // 変更後
         const days = [];
         for (let i = 6; i >= 0; i--) {
-            const d = new Date(Date.now() - i * 86400000);
+            const d = new Date(Date.now() - (i + chartWeekOffset * 7) * 86400000);
             days.push(d);
+        }
+        
+        // 期間表示の更新
+        const periodEl = document.getElementById('weekly-chart-period');
+        if (periodEl) {
+            const startMd = `${days[0].getMonth() + 1}/${days[0].getDate()}`;
+            const endMd = `${days[6].getMonth() + 1}/${days[6].getDate()}`;
+            periodEl.innerText = chartWeekOffset === 0 ? `${startMd} 〜 ${endMd}（直近7日間）` : `${startMd} 〜 ${endMd}`;
         }
     
         // 日付ごとに記録をグルーピング(同日内は時刻の早い順)
@@ -1089,6 +1108,34 @@ async function saveLineConfig() {
         statusEl.innerText = '';
         alert('保存エラー: ' + err.message);
     }
+}
+
+/**
+ * グラフ領域のスワイプ操作(左右)で表示週を切り替える
+ */
+function setupChartSwipe() {
+    const el = document.getElementById('weekly-chart');
+    if (!el) return;
+    let startX = 0;
+
+    el.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+    }, { passive: true });
+
+    el.addEventListener('touchend', (e) => {
+        const endX = e.changedTouches[0].clientX;
+        const diff = endX - startX;
+        if (Math.abs(diff) < 30) return; // 誤操作防止のしきい値
+
+        if (diff < 0) {
+            // 左スワイプ → 過去の週へ(無制限)
+            chartWeekOffset += 1;
+        } else {
+            // 右スワイプ → 直近の週へ(0未満にはしない)
+            if (chartWeekOffset > 0) chartWeekOffset -= 1;
+        }
+        renderWeeklyChart();
+    }, { passive: true });
 }
 </script>
 </body>
