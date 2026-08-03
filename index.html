@@ -63,6 +63,10 @@
         .memo-content { flex: 1; font-size: 0.95rem; line-height: 1.4; }
         .memo-transcribed .memo-content { text-decoration: line-through; color: #b0b8bd; }
         .memo-actions button { background: none; border: none; cursor: pointer; font-size: 1.05rem; }
+        .chart-scroll-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
     </style>
     <!-- ファビコン -->
 <link rel="icon" type="image/png" href="icon.png">
@@ -127,13 +131,14 @@
         </div>
         <!-- ↓ ここから追加 -->
         <div class="card">
-            <h2>直近7日間のミルク量</h2>
+            <h2>過去のミルク量</h2>
             <div class="chart-mode-toggle">
                 <button id="mode-btn-session" class="mode-btn active" onclick="setChartMode('session')">回数ごと</button>
                 <button id="mode-btn-time" class="mode-btn" onclick="setChartMode('timeofday')">時間帯ごと</button>
             </div>
-            <div id="weekly-chart"></div>
-            <div id="weekly-chart-period" style="text-align:center; font-size:0.85rem; color:#7f8c8d; margin-top:6px; font-weight:bold;"></div>
+            <div class="chart-scroll-container" id="chart-scroll-container">
+                <div id="weekly-chart"></div>
+            </div>
             <div id="weekly-chart-legend" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; font-size:0.8rem;"></div>
             <div style="text-align:center; font-size:0.75rem; color:#7f8c8d; margin-top:8px;">左右にスワイプすると過去の週も見られます</div>
         </div>
@@ -267,7 +272,6 @@
     let lastRecordTime = null;
     let lastRecordAmount = null; // ← 追加：前回の授乳量
     let chartMode = 'session'; // 'session'(回数ごと) or 'timeofday'(時間帯ごと)
-    let chartWeekOffset = 0; // 0=直近7日間、1=1週間前、2=2週間前...
 
     // パステル系カラーパレット
     const sessionPalette = ['#a8d8ea', '#ffb3ba', '#ffe4a3', '#b5e7c8', '#d4b3e0', '#ffcda3', '#a3e0d0', '#e0b3d4'];
@@ -291,7 +295,6 @@
         resetMemoDate(); // ← 追加
         fetchInitialData();
         loadHistoryData(); // ← 追加：ページ読み込み時に履歴・グラフも先読みしておく
-        setupChartSwipe(); // ← 追加
     
         document.getElementById('record-time').addEventListener('input', () => {
             recordTimeManuallyChanged = true;
@@ -357,7 +360,6 @@ document.addEventListener('visibilitychange', () => {
         document.getElementById('page-line').classList.toggle('active', tabName === 'line');
     
         if (tabName === 'history') {
-            chartWeekOffset = 0; // ← 追加：履歴タブを開くたびに直近7日間に戻す
             loadHistoryData();
         } else if (tabName === 'record') {
             fetchInitialData();
@@ -616,37 +618,35 @@ async function submitRecord() {
         return `${o.year}/${o.month}/${o.day}`;
     }
     
-    // 直近7日間・積み上げ棒グラフの描画(量×回数)
     function renderWeeklyChart() {
         const container = document.getElementById('weekly-chart');
         const legendContainer = document.getElementById('weekly-chart-legend');
+        const scrollContainer = document.getElementById('chart-scroll-container');
         if (!container) return;
     
-        // 変更前
-        // const days = [];
-        // for (let i = 6; i >= 0; i--) {
-        //     const d = new Date(Date.now() - i * 86400000);
-        //     days.push(d);
-        // }
-        
-        // 変更後
-        const days = [];
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date(Date.now() - (i + chartWeekOffset * 7) * 86400000);
-            days.push(d);
+        // 記録がある最も古い日付〜今日までの、全期間分の日付配列を作る
+        const milkOnly = allRecords.filter(isMilk);
+        let earliestDate = new Date();
+        if (milkOnly.length > 0) {
+            const earliestTimestamp = milkOnly.reduce((min, r) =>
+                new Date(r.timestamp) < new Date(min) ? r.timestamp : min, milkOnly[0].timestamp);
+            earliestDate = new Date(earliestTimestamp);
         }
-        
-        // 期間表示の更新
-        const periodEl = document.getElementById('weekly-chart-period');
-        if (periodEl) {
-            const startMd = `${days[0].getMonth() + 1}/${days[0].getDate()}`;
-            const endMd = `${days[6].getMonth() + 1}/${days[6].getDate()}`;
-            periodEl.innerText = chartWeekOffset === 0 ? `${startMd} 〜 ${endMd}（直近7日間）` : `${startMd} 〜 ${endMd}`;
+        earliestDate.setHours(0, 0, 0, 0);
+    
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+    
+        const totalDays = Math.max(Math.round((today - earliestDate) / 86400000) + 1, 7);
+    
+        const days = [];
+        for (let i = totalDays - 1; i >= 0; i--) {
+            days.push(new Date(today.getTime() - i * 86400000));
         }
     
-        // 日付ごとに記録をグルーピング(同日内は時刻の早い順)
+        // 日付ごとに記録をグルーピング
         const byDay = {};
-        allRecords.filter(isMilk).forEach(r => {  // ← .filter(isMilk)を追加
+        milkOnly.forEach(r => {
             if (!byDay[r.date]) byDay[r.date] = [];
             byDay[r.date].push(r);
         });
@@ -658,29 +658,29 @@ async function submitRecord() {
             const total = records.reduce((sum, r) => sum + Number(r.amount), 0);
             return { dateObj: d, key, records, total };
         });
-
-        // ← 追加：タップ時の詳細表示のために、直近描画分の日別データを保持しておく
+    
         lastChartDayData = dayData;
     
         const maxTotal = Math.max(...dayData.map(d => d.total), 100);
     
-        // SVG描画パラメータ
-        const width = 340, height = 210;
+        // 1日あたりの幅は固定。日数が増えるほどSVG全体の幅が広がる
+        const dayWidth = 48;
         const marginTop = 20, marginBottom = 34, marginLeft = 10, marginRight = 10;
+        const width = marginLeft + marginRight + dayWidth * totalDays;
+        const height = 210;
         const chartHeight = height - marginTop - marginBottom;
-        const barAreaWidth = (width - marginLeft - marginRight) / 7;
-        const barWidth = barAreaWidth * 0.55;
+        const barWidth = dayWidth * 0.55;
     
-        let svg = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto;">`;
+        let svg = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="height:210px; width:${width}px; display:block;">`;
     
         dayData.forEach((d, i) => {
-            const x = marginLeft + i * barAreaWidth + (barAreaWidth - barWidth) / 2;
+            const x = marginLeft + i * dayWidth + (dayWidth - barWidth) / 2;
             let yCursor = marginTop + chartHeight;
     
             d.records.forEach((r, sessionIndex) => {
                 const segHeight = (Number(r.amount) / maxTotal) * chartHeight;
                 yCursor -= segHeight;
-                const color = getColorForRecord(r, sessionIndex); // ← モードに応じた色
+                const color = getColorForRecord(r, sessionIndex);
                 svg += `<rect x="${x}" y="${yCursor}" width="${barWidth}" height="${segHeight}" fill="${color}" rx="2">
                             <title>${r.time} ${r.amount}ml</title>
                         </rect>`;
@@ -694,26 +694,29 @@ async function submitRecord() {
             const md = `${d.dateObj.getMonth() + 1}/${d.dateObj.getDate()}`;
             const wd = new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', weekday: 'short' }).format(d.dateObj);
             svg += `<text x="${x + barWidth / 2}" y="${height - marginBottom + 14}" font-size="10" text-anchor="middle" fill="#7f8c8d">${md}(${wd})</text>`;
-
-            // ← 追加：その日の棒全体（グラフ上下いっぱい＋左右は棒より少し広め）を覆う透明なタップ領域。
-            // 個々の授乳セグメントを正確に狙わなくても、その日の棒であればどこをタップしても詳細が開く。
-            const tapX = marginLeft + i * barAreaWidth;
-            svg += `<rect x="${tapX}" y="${marginTop}" width="${barAreaWidth}" height="${chartHeight}" fill="transparent" style="cursor:pointer;" onclick="openDayDetailModal(${i})"></rect>`;
+    
+            const tapX = marginLeft + i * dayWidth;
+            svg += `<rect x="${tapX}" y="${marginTop}" width="${dayWidth}" height="${chartHeight}" fill="transparent" style="cursor:pointer;" onclick="openDayDetailModal(${i})"></rect>`;
         });
     
         svg += `</svg>`;
         container.innerHTML = svg;
     
-        // 凡例(モードに応じて内容を切り替え)
+        // 初回表示時は、一番右(直近)が見える位置まで自動スクロール
+        if (scrollContainer) {
+            requestAnimationFrame(() => {
+                scrollContainer.scrollLeft = scrollContainer.scrollWidth;
+            });
+        }
+    
+        // 凡例(モードに応じて内容を切り替え) ※既存のまま
         if (legendContainer) {
             let legendHtml = '';
             if (chartMode === 'timeofday') {
-                // 時間帯ごと:常に固定4項目
                 for (let i = 0; i < 4; i++) {
                     legendHtml += `<span class="legend-item"><span class="legend-swatch" style="background:${timePalette[i]}"></span>${timeLabels[i]}</span>`;
                 }
             } else {
-                // 回数ごと:実際の最大回数分だけ表示(「回目」は省略)
                 const maxSessions = Math.max(...dayData.map(d => d.records.length), 1);
                 for (let i = 0; i < maxSessions; i++) {
                     legendHtml += `<span class="legend-item"><span class="legend-swatch" style="background:${sessionPalette[i % sessionPalette.length]}"></span>${i + 1}</span>`;
@@ -1110,33 +1113,6 @@ async function saveLineConfig() {
     }
 }
 
-/**
- * グラフ領域のスワイプ操作(左右)で表示週を切り替える
- */
-function setupChartSwipe() {
-    const el = document.getElementById('weekly-chart');
-    if (!el) return;
-    let startX = 0;
-
-    el.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX;
-    }, { passive: true });
-
-    el.addEventListener('touchend', (e) => {
-        const endX = e.changedTouches[0].clientX;
-        const diff = endX - startX;
-        if (Math.abs(diff) < 30) return; // 誤操作防止のしきい値
-
-        if (diff < 0) {
-            // 左スワイプ → 過去の週へ(無制限)
-            chartWeekOffset += 1;
-        } else {
-            // 右スワイプ → 直近の週へ(0未満にはしない)
-            if (chartWeekOffset > 0) chartWeekOffset -= 1;
-        }
-        renderWeeklyChart();
-    }, { passive: true });
-}
 </script>
 </body>
 </html>
