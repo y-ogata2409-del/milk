@@ -98,6 +98,7 @@
     <div id="page-record" class="page active">
         <div class="card">
             <div class="timer-box">
+                <span id="baby-age" style="display:block; font-size:0.9rem; color:#7f8c8d; margin-bottom:6px;"></span>
                 🍼 前回のミルクから <span id="elapsed-time">計算中...</span> 経過<br>
                 <span style="font-size:0.85rem; color:#7f8c8d;">前回の量: <span id="last-amount">-</span></span>
             </div>
@@ -295,6 +296,7 @@
         resetMemoDate(); // ← 追加
         fetchInitialData();
         loadHistoryData(); // ← 追加：ページ読み込み時に履歴・グラフも先読みしておく
+        updateBabyAge(); // ← 追加：ページ読み込み時に1回表示
     
         document.getElementById('record-time').addEventListener('input', () => {
             recordTimeManuallyChanged = true;
@@ -314,6 +316,7 @@ document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
         switchTab('record'); // ← 追加：他アプリ等から戻ってきたら、常に「記録入力」タブを表示する
         updateElapsedTime();
+        updateBabyAge(); // ← 追加
         if (!recordTimeManuallyChanged) {
             resetFormTime();
         }
@@ -1112,7 +1115,24 @@ async function saveLineConfig() {
         alert('保存エラー: ' + err.message);
     }
 }
+// ==========================================================
+// 生後日数の表示
+// ==========================================================
+const BIRTH_DATE = '2026-06-24'; // 誕生日(必要に応じて変更してください)
 
+function updateBabyAge() {
+    const el = document.getElementById('baby-age');
+    if (!el) return;
+
+    const birth = new Date(BIRTH_DATE + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    birth.setHours(0, 0, 0, 0);
+
+    const diffDays = Math.floor((today - birth) / 86400000) + 1; // 誕生日を1日目とする
+
+    el.innerText = `👶 生後 ${diffDays}日目`;
+}
 </script>
 </body>
 </html>
