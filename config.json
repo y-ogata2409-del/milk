@@ -1,9 +1,7 @@
 {
-  "buttonAmounts": [
-    100,
-    120,
-    140
-  ],
+  "buttonAmounts": [100, 120, 140],
   "notifyEnabled": true,
-  "notifyMinutes": 180
+  "notifyMinutes": 180,
+  "notifyMethod": "auto",
+  "notifyEmail": ""
 }
