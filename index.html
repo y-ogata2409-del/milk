@@ -1081,11 +1081,20 @@ async function loadLineConfig() {
 
         document.getElementById('notify-enabled').checked = !!currentLineConfig.notifyEnabled;
         document.getElementById('notify-minutes').value = currentLineConfig.notifyMinutes || 180;
+
+        // ↓ここから追加
+        const method = currentLineConfig.notifyMethod || 'auto';
+        const radio = document.querySelector(`input[name="notify-method"][value="${method}"]`);
+        if (radio) radio.checked = true;
+        document.getElementById('notify-email').value = currentLineConfig.notifyEmail || '';
+        // ↑ここまで追加
+
         renderLineAmountList();
     } catch (err) {
         alert('設定の読み込みに失敗しました: ' + err.message);
     }
 }
+
 
 function renderLineAmountList() {
     const container = document.getElementById('line-amount-list');
@@ -1122,6 +1131,12 @@ async function saveLineConfig() {
     currentLineConfig.notifyEnabled = document.getElementById('notify-enabled').checked;
     currentLineConfig.notifyMinutes = parseInt(document.getElementById('notify-minutes').value, 10) || 180;
 
+    // ↓ここから追加
+    const checkedMethod = document.querySelector('input[name="notify-method"]:checked');
+    currentLineConfig.notifyMethod = checkedMethod ? checkedMethod.value : 'auto';
+    currentLineConfig.notifyEmail = document.getElementById('notify-email').value.trim();
+    // ↑ここまで追加
+
     const statusEl = document.getElementById('line-config-status');
     statusEl.innerText = '保存中...';
 
@@ -1140,6 +1155,7 @@ async function saveLineConfig() {
         alert('保存エラー: ' + err.message);
     }
 }
+
 // ==========================================================
 // 生後日数の表示
 // ==========================================================
