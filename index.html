@@ -222,9 +222,14 @@
             </div>
         
             <div class="form-group">
-                <label for="notify-email">通知先メールアドレス（自動・メール利用時に使用）</label>
-                <input type="email" id="notify-email" placeholder="example@example.com" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+                <label for="notify-email-1">通知先メールアドレス（あなた）</label>
+                <input type="email" id="notify-email-1" placeholder="example@example.com" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color);">
             </div>
+            <div class="form-group">
+                <label for="notify-email-2">通知先メールアドレス（配偶者）</label>
+                <input type="email" id="notify-email-2" placeholder="example@example.com" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+            </div>
+
         
             <button class="btn" onclick="saveLineConfig()">設定を保存</button>
             <div id="line-config-status" style="text-align:center; font-size:0.85rem; color:#7f8c8d; margin-top:8px;"></div>
@@ -1086,8 +1091,14 @@ async function loadLineConfig() {
         const method = currentLineConfig.notifyMethod || 'auto';
         const radio = document.querySelector(`input[name="notify-method"][value="${method}"]`);
         if (radio) radio.checked = true;
-        document.getElementById('notify-email').value = currentLineConfig.notifyEmail || '';
-        // ↑ここまで追加
+        // 変更前
+        // document.getElementById('notify-email').value = currentLineConfig.notifyEmail || '';
+        
+        // 変更後
+        const emails = currentLineConfig.notifyEmails || ['', ''];
+        document.getElementById('notify-email-1').value = emails[0] || '';
+        document.getElementById('notify-email-2').value = emails[1] || '';
+
 
         renderLineAmountList();
     } catch (err) {
@@ -1134,8 +1145,15 @@ async function saveLineConfig() {
     // ↓ここから追加
     const checkedMethod = document.querySelector('input[name="notify-method"]:checked');
     currentLineConfig.notifyMethod = checkedMethod ? checkedMethod.value : 'auto';
-    currentLineConfig.notifyEmail = document.getElementById('notify-email').value.trim();
-    // ↑ここまで追加
+    // 変更前
+    // currentLineConfig.notifyEmail = document.getElementById('notify-email').value.trim();
+    
+    // 変更後
+    currentLineConfig.notifyEmails = [
+        document.getElementById('notify-email-1').value.trim(),
+        document.getElementById('notify-email-2').value.trim()
+    ].filter(email => email); // 空欄は除外
+
 
     const statusEl = document.getElementById('line-config-status');
     statusEl.innerText = '保存中...';
