@@ -202,9 +202,34 @@
                 <label for="notify-minutes">何分経過したら通知するか</label>
                 <input type="number" id="notify-minutes" placeholder="例：180" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color);">
             </div>
+        
+            <div class="form-group">
+                <label>通知方法</label>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
+                    <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+                        <input type="radio" name="notify-method" value="auto" style="width:auto;">
+                        自動（LINE優先、失敗した日はメール）
+                    </label>
+                    <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+                        <input type="radio" name="notify-method" value="line" style="width:auto;">
+                        LINEのみ
+                    </label>
+                    <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+                        <input type="radio" name="notify-method" value="email" style="width:auto;">
+                        メールのみ
+                    </label>
+                </div>
+            </div>
+        
+            <div class="form-group">
+                <label for="notify-email">通知先メールアドレス（自動・メール利用時に使用）</label>
+                <input type="email" id="notify-email" placeholder="example@example.com" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+            </div>
+        
             <button class="btn" onclick="saveLineConfig()">設定を保存</button>
             <div id="line-config-status" style="text-align:center; font-size:0.85rem; color:#7f8c8d; margin-top:8px;"></div>
         </div>
+
     </div>
 </div>
 
