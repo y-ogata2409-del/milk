@@ -1,7 +1,14 @@
 {
-  "buttonAmounts": [100, 120, 140],
+  "buttonAmounts": [
+    100,
+    120,
+    140
+  ],
   "notifyEnabled": true,
   "notifyMinutes": 180,
   "notifyMethod": "auto",
-  "notifyEmails": ["tamago1yen@gmail.com", ""]
+  "notifyEmails": [
+    "tamago1yen@gmail.com",
+    "chami.2ya_o5@icloud.com"
+  ]
 }
