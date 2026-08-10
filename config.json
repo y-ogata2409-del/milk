@@ -6,7 +6,7 @@
   ],
   "notifyEnabled": true,
   "notifyMinutes": 180,
-  "notifyMethod": "auto",
+  "notifyMethod": "email",
   "notifyEmails": [
     "tamago1yen@gmail.com",
     "chami.2ya_o5@icloud.com"
