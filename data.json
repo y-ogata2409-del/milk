@@ -1866,5 +1866,14 @@
     "timestamp": "2026-08-11T10:52:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msoqhg7c_yran2v",
+    "date": "2026/08/11",
+    "time": "23:06",
+    "timestamp": "2026-08-11T14:06:00.000Z",
+    "amount": 90,
+    "memo": ""
   }
 ]
