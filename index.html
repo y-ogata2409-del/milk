@@ -254,7 +254,7 @@
             <label for="edit-memo">メモ</label>
             <input type="text" id="edit-memo" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color); font-size:1rem;">
         </div>
-        <button class="btn" onclick="saveEdit()">保存する</button>
+        <button class="btn" id="save-edit-btn" onclick="saveEdit()">保存する</button>
         <div class="modal-buttons">
             <button class="btn btn-danger" id="delete-btn" onclick="deleteRecord()" style="flex:1;">削除</button>
             <button class="btn" onclick="closeModal()" style="flex:1; background:#95a5a6;">閉じる</button>
@@ -861,38 +861,50 @@ async function submitRecord() {
         const timeVal = document.getElementById('edit-time').value;
         const amountVal = document.getElementById('edit-amount').value;
         const memoVal = document.getElementById('edit-memo').value;
-
+    
         if (!timeVal) return alert('日時を入力してください');
-
+    
         const record = {
             id: id,
             timestamp: new Date(timeVal).toISOString(),
             amount: parseInt(amountVal),
             memo: memoVal
         };
-
+    
+        const saveBtn = document.getElementById('save-edit-btn'); // ← ここ
+        if (saveBtn) { saveBtn.disabled = true; saveBtn.innerText = '保存中...'; }
+    
         try {
-            await callWorkerPost('saveRecord', record);    // ← 同上
+            await callWorkerPost('saveRecord', record);
             closeModal();
             loadHistoryData();
             fetchInitialData();
         } catch (err) {
             alert('保存エラー: ' + err.message);
+        } finally {
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.innerText = '保存する'; }
         }
     }
 
     // 削除
-    async function deleteRecord() {
+        async function deleteRecord() {
         const id = document.getElementById('edit-id').value;
         if (!id || !confirm('この記録を削除してもよろしいですか？')) return;
-
+    
+        const deleteBtn = document.getElementById('delete-btn'); // ← 追加
+        deleteBtn.disabled = true; // ← 追加
+        deleteBtn.innerText = '削除中...'; // ← 追加
+    
         try {
-            await callWorkerPost('deleteRecord', { id });  // ← 同上
+            await callWorkerPost('deleteRecord', { id });
             closeModal();
             loadHistoryData();
             fetchInitialData();
         } catch (err) {
             alert('削除エラー: ' + err.message);
+        } finally {
+            deleteBtn.disabled = false; // ← 追加
+            deleteBtn.innerText = '削除'; // ← 追加
         }
     }
     function setChartMode(mode) {
