@@ -1848,14 +1848,5 @@
     "timestamp": "2026-08-11T00:08:00.000Z",
     "amount": 120,
     "memo": ""
-  },
-  {
-    "type": "milk",
-    "id": "mso3piar_uiqy1m",
-    "date": "2026/08/11",
-    "time": "12:28",
-    "timestamp": "2026-08-11T03:28:00.000Z",
-    "amount": 100,
-    "memo": ""
   }
 ]
