@@ -1812,23 +1812,5 @@
     "timestamp": "2026-08-10T20:47:00.000Z",
     "amount": 120,
     "memo": ""
-  },
-  {
-    "type": "milk",
-    "id": "mso3e14m_v5ikg0",
-    "date": "2026/08/11",
-    "time": "12:19",
-    "timestamp": "2026-08-11T03:19:00.000Z",
-    "amount": 120,
-    "memo": ""
-  },
-  {
-    "type": "milk",
-    "id": "mso3evsf_02mdsn",
-    "date": "2026/08/11",
-    "time": "09:10",
-    "timestamp": "2026-08-11T00:10:00.000Z",
-    "amount": 120,
-    "memo": ""
   }
 ]
