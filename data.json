@@ -1830,5 +1830,14 @@
     "timestamp": "2026-08-11T00:06:00.000Z",
     "amount": 120,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mso3am38_kadfhy",
+    "date": "2026/08/11",
+    "time": "12:17",
+    "timestamp": "2026-08-11T03:17:00.000Z",
+    "amount": 120,
+    "memo": ""
   }
 ]
