@@ -1916,5 +1916,14 @@
     "date": "2026/08/12",
     "content": "体重　4.4kg",
     "transcribed": false
+  },
+  {
+    "type": "milk",
+    "id": "msphwfsc_bp6xik",
+    "date": "2026/08/12",
+    "time": "11:53",
+    "timestamp": "2026-08-12T02:53:00.000Z",
+    "amount": 120,
+    "memo": ""
   }
 ]
