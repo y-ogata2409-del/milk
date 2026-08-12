@@ -1943,5 +1943,14 @@
     "timestamp": "2026-08-12T10:34:00.000Z",
     "amount": 120,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msq4p0lh_jhcsqg",
+    "date": "2026/08/12",
+    "time": "22:32",
+    "timestamp": "2026-08-12T13:32:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
