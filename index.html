@@ -203,33 +203,49 @@
                 <input type="number" id="notify-minutes" placeholder="例：180" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color);">
             </div>
         
-            <div class="form-group">
-                <label>通知方法</label>
+            <div style="border-top:1px solid var(--border-color); margin-top:16px; padding-top:16px;">
+                <h2 style="font-size:1rem; text-align:left;">あなたの通知方法</h2>
                 <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
                     <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
-                        <input type="radio" name="notify-method" value="auto" style="width:auto;">
+                        <input type="radio" name="notify-method-you" value="auto" style="width:auto;">
                         自動（LINE優先、失敗した日はメール）
                     </label>
                     <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
-                        <input type="radio" name="notify-method" value="line" style="width:auto;">
+                        <input type="radio" name="notify-method-you" value="line" style="width:auto;">
                         LINEのみ
                     </label>
                     <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
-                        <input type="radio" name="notify-method" value="email" style="width:auto;">
+                        <input type="radio" name="notify-method-you" value="email" style="width:auto;">
                         メールのみ
                     </label>
                 </div>
+                <div class="form-group" style="margin-top:10px;">
+                    <label for="notify-email-you">通知先メールアドレス</label>
+                    <input type="email" id="notify-email-you" placeholder="example@example.com" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+                </div>
             </div>
         
-            <div class="form-group">
-                <label for="notify-email-1">通知先メールアドレス（あなた）</label>
-                <input type="email" id="notify-email-1" placeholder="example@example.com" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+            <div style="border-top:1px solid var(--border-color); margin-top:16px; padding-top:16px;">
+                <h2 style="font-size:1rem; text-align:left;">配偶者の通知方法</h2>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:6px;">
+                    <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+                        <input type="radio" name="notify-method-wife" value="auto" style="width:auto;">
+                        自動（LINE優先、失敗した日はメール）
+                    </label>
+                    <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+                        <input type="radio" name="notify-method-wife" value="line" style="width:auto;">
+                        LINEのみ
+                    </label>
+                    <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+                        <input type="radio" name="notify-method-wife" value="email" style="width:auto;">
+                        メールのみ
+                    </label>
+                </div>
+                <div class="form-group" style="margin-top:10px;">
+                    <label for="notify-email-wife">通知先メールアドレス</label>
+                    <input type="email" id="notify-email-wife" placeholder="example@example.com" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+                </div>
             </div>
-            <div class="form-group">
-                <label for="notify-email-2">通知先メールアドレス（配偶者）</label>
-                <input type="email" id="notify-email-2" placeholder="example@example.com" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border-color);">
-            </div>
-
         
             <button class="btn" onclick="saveLineConfig()">設定を保存</button>
             <div id="line-config-status" style="text-align:center; font-size:0.85rem; color:#7f8c8d; margin-top:8px;"></div>
@@ -1099,18 +1115,21 @@ async function loadLineConfig() {
         document.getElementById('notify-enabled').checked = !!currentLineConfig.notifyEnabled;
         document.getElementById('notify-minutes').value = currentLineConfig.notifyMinutes || 180;
 
-        // ↓ここから追加
-        const method = currentLineConfig.notifyMethod || 'auto';
-        const radio = document.querySelector(`input[name="notify-method"][value="${method}"]`);
-        if (radio) radio.checked = true;
-        // 変更前
-        // document.getElementById('notify-email').value = currentLineConfig.notifyEmail || '';
-        
-        // 変更後
-        const emails = currentLineConfig.notifyEmails || ['', ''];
-        document.getElementById('notify-email-1').value = emails[0] || '';
-        document.getElementById('notify-email-2').value = emails[1] || '';
+        const settings = currentLineConfig.notifySettings || [
+            { person: 'you', method: 'auto', email: '' },
+            { person: 'wife', method: 'auto', email: '' }
+        ];
 
+        const youSetting = settings.find(s => s.person === 'you') || { method: 'auto', email: '' };
+        const wifeSetting = settings.find(s => s.person === 'wife') || { method: 'auto', email: '' };
+
+        const youRadio = document.querySelector(`input[name="notify-method-you"][value="${youSetting.method}"]`);
+        if (youRadio) youRadio.checked = true;
+        document.getElementById('notify-email-you').value = youSetting.email || '';
+
+        const wifeRadio = document.querySelector(`input[name="notify-method-wife"][value="${wifeSetting.method}"]`);
+        if (wifeRadio) wifeRadio.checked = true;
+        document.getElementById('notify-email-wife').value = wifeSetting.email || '';
 
         renderLineAmountList();
     } catch (err) {
@@ -1154,18 +1173,21 @@ async function saveLineConfig() {
     currentLineConfig.notifyEnabled = document.getElementById('notify-enabled').checked;
     currentLineConfig.notifyMinutes = parseInt(document.getElementById('notify-minutes').value, 10) || 180;
 
-    // ↓ここから追加
-    const checkedMethod = document.querySelector('input[name="notify-method"]:checked');
-    currentLineConfig.notifyMethod = checkedMethod ? checkedMethod.value : 'auto';
-    // 変更前
-    // currentLineConfig.notifyEmail = document.getElementById('notify-email').value.trim();
-    
-    // 変更後
-    currentLineConfig.notifyEmails = [
-        document.getElementById('notify-email-1').value.trim(),
-        document.getElementById('notify-email-2').value.trim()
-    ].filter(email => email); // 空欄は除外
+    const youMethod = document.querySelector('input[name="notify-method-you"]:checked');
+    const wifeMethod = document.querySelector('input[name="notify-method-wife"]:checked');
 
+    currentLineConfig.notifySettings = [
+        {
+            person: 'you',
+            method: youMethod ? youMethod.value : 'auto',
+            email: document.getElementById('notify-email-you').value.trim()
+        },
+        {
+            person: 'wife',
+            method: wifeMethod ? wifeMethod.value : 'auto',
+            email: document.getElementById('notify-email-wife').value.trim()
+        }
+    ];
 
     const statusEl = document.getElementById('line-config-status');
     statusEl.innerText = '保存中...';
