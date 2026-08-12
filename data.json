@@ -1961,5 +1961,14 @@
     "timestamp": "2026-08-12T17:28:00.000Z",
     "amount": 70,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msqirfhr_mx05h8",
+    "date": "2026/08/13",
+    "time": "05:05",
+    "timestamp": "2026-08-12T20:05:00.000Z",
+    "amount": 120,
+    "memo": ""
   }
 ]
