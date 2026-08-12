@@ -1934,5 +1934,14 @@
     "timestamp": "2026-08-12T07:30:00.000Z",
     "amount": 120,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mspyd6qz_7uwk2y",
+    "date": "2026/08/12",
+    "time": "19:34",
+    "timestamp": "2026-08-12T10:34:00.000Z",
+    "amount": 120,
+    "memo": ""
   }
 ]
