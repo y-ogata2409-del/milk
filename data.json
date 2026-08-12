@@ -1952,5 +1952,14 @@
     "timestamp": "2026-08-12T13:32:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msqd5hup_ari93m",
+    "date": "2026/08/13",
+    "time": "02:28",
+    "timestamp": "2026-08-12T17:28:00.000Z",
+    "amount": 70,
+    "memo": ""
   }
 ]
