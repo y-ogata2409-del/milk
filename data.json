@@ -2006,5 +2006,14 @@
     "timestamp": "2026-08-13T08:51:45.577Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msri0xkf_74eqdh",
+    "date": "2026/08/13",
+    "time": "21:32",
+    "timestamp": "2026-08-13T12:32:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
