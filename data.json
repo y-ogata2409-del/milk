@@ -2015,5 +2015,14 @@
     "timestamp": "2026-08-13T12:32:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msrsgjfp_ysq1be",
+    "date": "2026/08/14",
+    "time": "02:25",
+    "timestamp": "2026-08-13T17:25:00.000Z",
+    "amount": 110,
+    "memo": ""
   }
 ]
