@@ -1988,5 +1988,14 @@
     "timestamp": "2026-08-13T02:49:25.062Z",
     "amount": 120,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msr39kjg_q74sct",
+    "date": "2026/08/13",
+    "time": "14:39",
+    "timestamp": "2026-08-13T05:39:00.000Z",
+    "amount": 120,
+    "memo": ""
   }
 ]
