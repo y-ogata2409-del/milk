@@ -92,7 +92,7 @@
         <div class="tab active" onclick="switchTab('record')">記録</div>
         <div class="tab" onclick="switchTab('history')">履歴</div>
         <div class="tab" onclick="switchTab('memo')">育児メモ</div>
-        <div class="tab" onclick="switchTab('line')">LINE</div>
+        <div class="tab" onclick="switchTab('line')">通知</div>
     </div>
 
     <div id="page-record" class="page active">
@@ -218,6 +218,10 @@
                         <input type="radio" name="notify-method-you" value="email" style="width:auto;">
                         メールのみ
                     </label>
+                    <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+                        <input type="radio" name="notify-method-you" value="none" style="width:auto;">
+                        通知しない
+                    </label>
                 </div>
                 <div class="form-group" style="margin-top:10px;">
                     <label for="notify-email-you">通知先メールアドレス</label>
@@ -239,6 +243,10 @@
                     <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
                         <input type="radio" name="notify-method-wife" value="email" style="width:auto;">
                         メールのみ
+                    </label>
+                    <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+                        <input type="radio" name="notify-method-wife" value="none" style="width:auto;">
+                        通知しない
                     </label>
                 </div>
                 <div class="form-group" style="margin-top:10px;">
