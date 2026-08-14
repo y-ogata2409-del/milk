@@ -2103,5 +2103,14 @@
     "date": "2026/08/15",
     "content": "ベッドから転落した",
     "transcribed": false
+  },
+  {
+    "type": "milk",
+    "id": "mstknl0b_m3dk40",
+    "date": "2026/08/15",
+    "time": "07:50",
+    "timestamp": "2026-08-14T22:50:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
