@@ -2096,5 +2096,12 @@
     "timestamp": "2026-08-14T19:34:00.000Z",
     "amount": 120,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1786749557479_yb00gv",
+    "date": "2026/08/15",
+    "content": "ベッドから転落した",
+    "transcribed": false
   }
 ]
