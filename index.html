@@ -342,6 +342,7 @@
     }
     let memoFilterMode = 'untranscribed';
     let recordTimeManuallyChanged = false; // ← 追加：ユーザーが手動で時刻を変えたかどうか
+    let recordAmountManuallyChanged = false; // ← 追加：ユーザーが手動で量を変えたかどうか
     let lastChartDayData = []; // ← 追加：直近描画したグラフの日別データ（タップ時の詳細表示に使う）
 
     window.onload = function() {
@@ -355,7 +356,11 @@
         document.getElementById('record-time').addEventListener('input', () => {
             recordTimeManuallyChanged = true;
         });
-    
+        
+        document.getElementById('record-amount').addEventListener('change', () => {
+            recordAmountManuallyChanged = true;
+        });
+
         // 経過時間は1秒ごとに更新(リアルタイムのカウントアップ表示)
         setInterval(updateElapsedTime, 1000);
     
@@ -381,7 +386,6 @@ document.addEventListener('visibilitychange', () => {
         
     };
 
-    // ミルク量選択プルダウン（20ml〜240ml）の自動生成。デフォルト100ml
     function initAmountSelector() {
         const recordSelect = document.getElementById('record-amount');
         const modalSelect = document.getElementById('edit-amount');
@@ -397,6 +401,30 @@ document.addEventListener('visibilitychange', () => {
             opt2.innerText = ml + ' ml';
             modalSelect.appendChild(opt2);
         }
+    }
+    
+    // 直近5回のミルク記録の平均量から、20ml単位で一番近い量を算出する
+    function calcDefaultAmountFromHistory(milkRecords) {
+        const recentAmounts = milkRecords
+            .slice(0, 5)
+            .map(r => Number(r.amount))
+            .filter(a => !isNaN(a) && a > 0);
+    
+        if (recentAmounts.length === 0) return 100; // 記録が無ければ従来通り100ml
+    
+        const avg = recentAmounts.reduce((sum, a) => sum + a, 0) / recentAmounts.length;
+        let rounded = Math.round(avg / 20) * 20;
+        rounded = Math.max(20, Math.min(240, rounded)); // プルダウンの範囲内に収める
+        return rounded;
+    }
+    
+    // ミルク量プルダウンの初期値を、直近5回の平均に近い量にセットする
+    // （ユーザーがすでに手動で量を選択済みの場合は上書きしない）
+    function setDefaultRecordAmount(milkRecords) {
+        if (recordAmountManuallyChanged) return;
+        const defaultAmount = calcDefaultAmountFromHistory(milkRecords);
+        const select = document.getElementById('record-amount');
+        if (select) select.value = String(defaultAmount);
     }
 
     // 入力フォームの時刻を現在時刻（ローカル）にセット
@@ -512,6 +540,7 @@ document.addEventListener('visibilitychange', () => {
                 lastRecordAmount = milkRecords[0].amount;
                 document.getElementById('last-amount').innerText = `${lastRecordAmount}ml`;
                 updateElapsedTime();
+                setDefaultRecordAmount(milkRecords); // ← 追加：直近5回の平均に近い量を初期選択にする
             } else {
                 lastRecordAmount = null;
                 document.getElementById('last-amount').innerText = '-';
@@ -549,6 +578,7 @@ async function submitRecord() {
         updateElapsedTime();
         document.getElementById('record-memo').value = '';
         recordTimeManuallyChanged = false;
+        recordAmountManuallyChanged = false; // ← 追加：次回入力のため、量もリセットして再計算対象に戻す
         resetFormTime();
         alert('登録しました！');
 
