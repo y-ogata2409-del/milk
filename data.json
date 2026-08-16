@@ -2220,5 +2220,14 @@
     "timestamp": "2026-08-16T20:03:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mswg2zhf_f6qlgu",
+    "date": "2026/08/17",
+    "time": "08:25",
+    "timestamp": "2026-08-16T23:25:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
