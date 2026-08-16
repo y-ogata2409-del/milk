@@ -2202,5 +2202,14 @@
     "timestamp": "2026-08-16T10:57:00.000Z",
     "amount": 130,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msw17bpb_rniysi",
+    "date": "2026/08/17",
+    "time": "01:20",
+    "timestamp": "2026-08-16T16:20:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
