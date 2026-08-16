@@ -1,0 +1,92 @@
+[
+  {
+    "type": "milk",
+    "id": "msvoycnn_11tp6w",
+    "date": "2026/08/16",
+    "time": "19:57",
+    "timestamp": "2026-08-16T10:57:00.000Z",
+    "amount": 130,
+    "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msvgzawp_iinzq9",
+    "date": "2026/08/16",
+    "time": "16:14",
+    "timestamp": "2026-08-16T07:14:00.000Z",
+    "amount": 140,
+    "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msv7zqia_qn65vf",
+    "date": "2026/08/16",
+    "time": "12:03",
+    "timestamp": "2026-08-16T03:03:00.000Z",
+    "amount": 90,
+    "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msv3y3ou_bkdw1t",
+    "date": "2026/08/16",
+    "time": "09:40",
+    "timestamp": "2026-08-16T00:40:00.000Z",
+    "amount": 140,
+    "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msuuqmow_v8t6za",
+    "date": "2026/08/16",
+    "time": "05:52",
+    "timestamp": "2026-08-15T20:52:00.000Z",
+    "amount": 130,
+    "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msunbkji_lxsxwx",
+    "date": "2026/08/16",
+    "time": "02:24",
+    "timestamp": "2026-08-15T17:24:00.000Z",
+    "amount": 140,
+    "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msud8tdb_cmn7ra",
+    "date": "2026/08/15",
+    "time": "21:42",
+    "timestamp": "2026-08-15T12:42:00.000Z",
+    "amount": 140,
+    "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msu5dpin_jyq76d",
+    "date": "2026/08/15",
+    "time": "18:02",
+    "timestamp": "2026-08-15T09:02:00.000Z",
+    "amount": 140,
+    "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mstxqvtr_rxgjwi",
+    "date": "2026/08/15",
+    "time": "14:28",
+    "timestamp": "2026-08-15T05:28:00.000Z",
+    "amount": 140,
+    "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mstpneoo_cuzg3m",
+    "date": "2026/08/15",
+    "time": "10:41",
+    "timestamp": "2026-08-15T01:41:00.000Z",
+    "amount": 120,
+    "memo": ""
+  }
+]
