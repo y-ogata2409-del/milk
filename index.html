@@ -317,6 +317,14 @@
 </div>
 <!-- ↑ 追加ここまで -->
 
+<!-- 登録完了トースト：OKボタンなし、2秒後に自動で閉じる -->
+<div class="modal" id="success-toast">
+    <div class="modal-content" style="text-align:center;">
+        <div style="font-size:2rem; margin-bottom:8px;">✅</div>
+        <div id="success-toast-message" style="font-weight:bold; font-size:1.05rem;"></div>
+    </div>
+</div>
+
 <script>
     // ==========================================================
     // ここにあなたのGASウェブアプリのURL(/exec で終わるもの)を設定してください
@@ -429,6 +437,21 @@ document.addEventListener('visibilitychange', () => {
         const select = document.getElementById('record-amount');
         if (select) select.value = String(defaultAmount);
     }
+
+    let successToastTimer = null;
+    function showSuccessToast(message) {
+        const modal = document.getElementById('success-toast');
+        const msgEl = document.getElementById('success-toast-message');
+        if (!modal || !msgEl) return;
+        msgEl.innerText = message;
+        modal.style.display = 'flex';
+    
+        if (successToastTimer) clearTimeout(successToastTimer);
+        successToastTimer = setTimeout(() => {
+            modal.style.display = 'none';
+        }, 2000);
+    }
+
 
     // 入力フォームの時刻を現在時刻（ローカル）にセット
     function resetFormTime() {
@@ -583,7 +606,7 @@ async function submitRecord() {
         recordTimeManuallyChanged = false;
         recordAmountManuallyChanged = false; // ← 追加：次回入力のため、量もリセットして再計算対象に戻す
         resetFormTime();
-        alert('登録しました！');
+        showSuccessToast('登録しました！');
 
         fetchInitialData();
     } catch (err) {
