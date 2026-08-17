@@ -1,6 +1,15 @@
 [
   {
     "type": "milk",
+    "id": "msxtancy_hbzl7k",
+    "date": "2026/08/18",
+    "time": "06:45",
+    "timestamp": "2026-08-17T21:45:00.000Z",
+    "amount": 140,
+    "memo": ""
+  },
+  {
+    "type": "milk",
     "id": "msxmd7km_0wg0nz",
     "date": "2026/08/18",
     "time": "04:21",
@@ -78,15 +87,6 @@
     "time": "19:57",
     "timestamp": "2026-08-16T10:57:00.000Z",
     "amount": 130,
-    "memo": ""
-  },
-  {
-    "type": "milk",
-    "id": "msvgzawp_iinzq9",
-    "date": "2026/08/16",
-    "time": "16:14",
-    "timestamp": "2026-08-16T07:14:00.000Z",
-    "amount": 140,
     "memo": ""
   }
 ]
