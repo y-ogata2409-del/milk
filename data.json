@@ -2274,5 +2274,14 @@
     "timestamp": "2026-08-17T19:21:00.000Z",
     "amount": 90,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msxtancy_hbzl7k",
+    "date": "2026/08/18",
+    "time": "06:45",
+    "timestamp": "2026-08-17T21:45:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
