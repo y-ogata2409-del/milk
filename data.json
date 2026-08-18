@@ -2319,5 +2319,14 @@
     "timestamp": "2026-08-18T12:11:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "msyuohjy_ulvmfh",
+    "date": "2026/08/19",
+    "time": "01:01",
+    "timestamp": "2026-08-18T16:01:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
