@@ -2364,5 +2364,14 @@
     "timestamp": "2026-08-19T07:56:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mt01c8gl_uia8gp",
+    "date": "2026/08/19",
+    "time": "20:55",
+    "timestamp": "2026-08-19T11:55:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
