@@ -2403,15 +2403,6 @@
   },
   {
     "type": "milk",
-    "id": "mt0wbfy3_qkpy7p",
-    "date": "2026/08/20",
-    "time": "11:22",
-    "timestamp": "2026-08-20T02:22:00.000Z",
-    "amount": 140,
-    "memo": ""
-  },
-  {
-    "type": "milk",
     "id": "mt0wbtst_1pxu7u",
     "date": "2026/08/20",
     "time": "11:23",
