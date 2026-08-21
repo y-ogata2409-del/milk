@@ -2517,5 +2517,14 @@
     "timestamp": "2026-08-21T15:17:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mt3braeo_02u1j6",
+    "date": "2026/08/22",
+    "time": "04:10",
+    "timestamp": "2026-08-21T19:10:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
