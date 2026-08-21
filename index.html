@@ -438,6 +438,7 @@ document.addEventListener('visibilitychange', () => {
         if (select) select.value = String(defaultAmount);
     }
 
+    // 登録完了トースト：OKボタンを押さなくても2秒後に自動で閉じる
     let successToastTimer = null;
     function showSuccessToast(message) {
         const modal = document.getElementById('success-toast');
@@ -445,13 +446,12 @@ document.addEventListener('visibilitychange', () => {
         if (!modal || !msgEl) return;
         msgEl.innerText = message;
         modal.style.display = 'flex';
-    
+
         if (successToastTimer) clearTimeout(successToastTimer);
         successToastTimer = setTimeout(() => {
             modal.style.display = 'none';
         }, 2000);
     }
-
 
     // 入力フォームの時刻を現在時刻（ローカル）にセット
     function resetFormTime() {
@@ -596,7 +596,14 @@ async function submitRecord() {
     submitBtn.innerText = '登録中...';
 
     try {
-        await callWorkerPost('addRecord', record);
+        const res = await callWorkerPost('addRecord', record);
+
+        // ← 追加：サーバーの反映を待たず、返ってきたレコードをその場でallRecordsに反映する。
+        //    これにより「登録直後に履歴を見るとまだ反映されていない」状態を防ぐ。
+        if (res && res.record) {
+            allRecords.unshift(res.record); // allRecordsは新しい順のため先頭に追加
+            renderHistory(); // 履歴タブが裏で開かれていても最新状態にしておく
+        }
 
         lastRecordTime = record.timestamp;
         lastRecordAmount = record.amount;
@@ -844,7 +851,7 @@ async function submitRecord() {
         return allRecords.filter(isMilk).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)); // ← .filter(isMilk)を追加
     }
 
-    // ← 追加：指定した記録の「前回の授乳からの間隔」を文字列で返す(日をまたいでも直前の記録を探す)
+    // ← 追加：指定した記録の「前回のミルクからの間隔」を文字列で返す(日をまたいでも直前の記録を探す)
     function getIntervalTextFor(record, sortedAsc) {
         const idx = sortedAsc.findIndex(r => r.id === record.id);
         if (idx <= 0) return null; // それより前の記録がない
@@ -1003,7 +1010,7 @@ async function submitRecord() {
         return hour;
     }
     
-    // 現在のモードに応じて、1回分の授乳記録の色を返す
+    // 現在のモードに応じて、1回分のミルク記録の色を返す
     function getColorForRecord(record, sessionIndex) {
         if (chartMode === 'timeofday') {
             const hour = getJSTHour(record.timestamp);
