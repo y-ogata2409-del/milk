@@ -2544,5 +2544,14 @@
     "timestamp": "2026-08-22T02:34:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mt419z35_jaboso",
+    "date": "2026/08/22",
+    "time": "14:49",
+    "timestamp": "2026-08-22T05:49:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
