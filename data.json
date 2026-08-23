@@ -2616,5 +2616,14 @@
     "timestamp": "2026-08-23T06:40:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mt5lzpkk_klghca",
+    "date": "2026/08/23",
+    "time": "18:32",
+    "timestamp": "2026-08-23T09:32:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
