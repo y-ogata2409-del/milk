@@ -2598,5 +2598,14 @@
     "timestamp": "2026-08-22T23:23:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mt58laee_npb74u",
+    "date": "2026/08/23",
+    "time": "12:17",
+    "timestamp": "2026-08-23T03:17:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
