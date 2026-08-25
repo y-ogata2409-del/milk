@@ -2752,15 +2752,6 @@
   },
   {
     "type": "milk",
-    "id": "mt8ha60w_x0e67h",
-    "date": "2026/08/25",
-    "time": "18:44",
-    "timestamp": "2026-08-25T09:44:00.000Z",
-    "amount": 100,
-    "memo": ""
-  },
-  {
-    "type": "milk",
     "id": "mt8hapqw_seq9bb",
     "date": "2026/08/25",
     "time": "18:44",
