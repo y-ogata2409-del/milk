@@ -2724,5 +2724,12 @@
     "timestamp": "2026-08-24T23:26:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1787622329247_t099p4",
+    "date": "2026/08/15",
+    "content": "ミルク量を140mlへ",
+    "transcribed": false
   }
 ]
