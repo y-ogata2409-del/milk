@@ -2731,5 +2731,14 @@
     "date": "2026/08/15",
     "content": "ミルク量を140mlへ",
     "transcribed": false
+  },
+  {
+    "type": "milk",
+    "id": "mt83pude_ufcd5h",
+    "date": "2026/08/25",
+    "time": "12:24",
+    "timestamp": "2026-08-25T03:24:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
