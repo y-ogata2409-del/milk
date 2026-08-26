@@ -2844,5 +2844,14 @@
     "timestamp": "2026-08-26T14:02:11.492Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtabteos_j11xe8",
+    "date": "2026/08/27",
+    "time": "01:46",
+    "timestamp": "2026-08-26T16:46:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
