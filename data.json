@@ -2880,5 +2880,14 @@
     "timestamp": "2026-08-27T03:02:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtb5ve29_pdiaus",
+    "date": "2026/08/27",
+    "time": "15:48",
+    "timestamp": "2026-08-27T06:48:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
