@@ -2871,5 +2871,14 @@
     "timestamp": "2026-08-26T23:34:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtaxtfrq_34ht6k",
+    "date": "2026/08/27",
+    "time": "12:02",
+    "timestamp": "2026-08-27T03:02:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
