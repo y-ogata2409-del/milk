@@ -2889,5 +2889,14 @@
     "timestamp": "2026-08-27T06:48:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtbcaof5_se793n",
+    "date": "2026/08/27",
+    "time": "18:47",
+    "timestamp": "2026-08-27T09:47:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
