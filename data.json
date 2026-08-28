@@ -2975,5 +2975,14 @@
     "date": "2026/08/28",
     "content": "鼻水出ている",
     "transcribed": false
+  },
+  {
+    "type": "milk",
+    "id": "mtcymyv6_5qk1lt",
+    "date": "2026/08/28",
+    "time": "22:01",
+    "timestamp": "2026-08-28T13:01:00.000Z",
+    "amount": 140,
+    "memo": ""
   }
 ]
