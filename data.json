@@ -2961,5 +2961,12 @@
     "timestamp": "2026-08-28T09:40:00.000Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1787911507587_lzrr0p",
+    "date": "2026/08/28",
+    "content": "目で追いかけられるようになってきている",
+    "transcribed": false
   }
 ]
