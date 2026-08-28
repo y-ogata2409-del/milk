@@ -3002,5 +3002,14 @@
     "timestamp": "2026-08-28T16:20:00.000Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtd9yz2y_uwbjxw",
+    "date": "2026/08/29",
+    "time": "01:48",
+    "timestamp": "2026-08-28T16:48:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
