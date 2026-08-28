@@ -3011,14 +3011,5 @@
     "timestamp": "2026-08-28T16:48:00.000Z",
     "amount": 160,
     "memo": ""
-  },
-  {
-    "type": "milk",
-    "id": "mtda4l70_81hfdf",
-    "date": "2026/08/29",
-    "time": "01:47",
-    "timestamp": "2026-08-28T16:47:00.000Z",
-    "amount": 100,
-    "memo": ""
   }
 ]
