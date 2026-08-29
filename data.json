@@ -3020,5 +3020,14 @@
     "timestamp": "2026-08-28T20:55:00.000Z",
     "amount": 140,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtdnvurz_git3rt",
+    "date": "2026/08/29",
+    "time": "09:33",
+    "timestamp": "2026-08-29T00:33:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
