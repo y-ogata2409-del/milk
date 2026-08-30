@@ -3119,5 +3119,14 @@
     "timestamp": "2026-08-30T07:10:00.000Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtfrz0df_mek1uv",
+    "date": "2026/08/30",
+    "time": "20:17",
+    "timestamp": "2026-08-30T11:17:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
