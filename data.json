@@ -3101,5 +3101,14 @@
     "timestamp": "2026-08-30T00:21:00.000Z",
     "amount": 120,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtfa6mpm_mlkx2w",
+    "date": "2026/08/30",
+    "time": "12:42",
+    "timestamp": "2026-08-30T03:42:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
