@@ -3146,5 +3146,12 @@
     "timestamp": "2026-08-30T19:09:00.000Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1788123545052_ivuh28",
+    "date": "2026/08/29",
+    "content": "鼻水、鼻詰まりあり。父がインフル（疑）",
+    "transcribed": false
   }
 ]
