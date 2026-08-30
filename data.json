@@ -3153,5 +3153,14 @@
     "date": "2026/08/30",
     "content": "鼻水、鼻詰まりあり。父がインフル（疑）",
     "transcribed": false
+  },
+  {
+    "type": "milk",
+    "id": "mtgdio2k_pok0ys",
+    "date": "2026/08/31",
+    "time": "07:21",
+    "timestamp": "2026-08-30T22:21:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
