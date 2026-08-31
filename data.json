@@ -3169,5 +3169,14 @@
     "date": "2026/08/29",
     "content": "ミルク量を160mlへ",
     "transcribed": false
+  },
+  {
+    "type": "milk",
+    "id": "mtgk5jhr_40yya1",
+    "date": "2026/08/31",
+    "time": "10:26",
+    "timestamp": "2026-08-31T01:26:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
