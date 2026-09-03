@@ -3340,5 +3340,14 @@
     "timestamp": "2026-09-02T20:45:00.000Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtkyylng_hdlewa",
+    "date": "2026/09/03",
+    "time": "12:32",
+    "timestamp": "2026-09-03T03:32:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
