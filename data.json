@@ -3475,5 +3475,14 @@
     "timestamp": "2026-09-05T02:57:00.000Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtoazrhh_879brz",
+    "date": "2026/09/05",
+    "time": "16:00",
+    "timestamp": "2026-09-05T07:00:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
