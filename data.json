@@ -3556,5 +3556,14 @@
     "timestamp": "2026-09-06T20:42:00.000Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtqinck6_inh7zl",
+    "date": "2026/09/07",
+    "time": "08:35",
+    "timestamp": "2026-09-06T23:35:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
