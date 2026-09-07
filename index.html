@@ -518,7 +518,19 @@ document.addEventListener('visibilitychange', () => {
     
         // GitHub上の実データは登録順(古い順)で並んでいるため、
         // 従来通り「新しい順」に統一してから返す
-        return json.data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        //
+        // ← 修正：type:'memo'のレコードはtimestampを持たないため、そのまま比較すると
+        //   new Date(undefined) = Invalid Date となり、比較結果がNaNになってしまう。
+        //   sort()の比較関数がNaNを返すのは未定義動作で、ブラウザによって
+        //   ミルク記録とメモが混在している箇所の並び順が崩れることがあった
+        //   （これが原因で、履歴一覧に反映されない・経過時間がズレる不具合につながっていた）。
+        //   timestampが無いレコードはdateフィールドで代用して、常に有効な値で比較する。
+        const getSortTime = (r) => {
+            if (r.timestamp) return new Date(r.timestamp).getTime();
+            if (r.date) return new Date(r.date).getTime();
+            return 0;
+        };
+        return json.data.sort((a, b) => getSortTime(b) - getSortTime(a));
     }
     
     // 書き込み：Cloudflare Worker経由でGitHubを更新
@@ -651,11 +663,21 @@ async function submitRecord() {
 
         container.innerHTML = '';
 
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - days);
+        // ← 修正：以前は「現在時刻からちょうどN×24時間前」というローリング時刻(timestamp)で
+        //   絞り込んでいたため、棒グラフ側(dateフィールドでその日に属するかを判定し、
+        //   期間の縛りなく全期間を表示するロジック)と基準がズレていた。
+        //   これにより、記録した時刻によっては「グラフには出るのに履歴一覧には出ない」
+        //   という不具合が起きていた。
+        //   ここを、棒グラフと同じ「記録のdateフィールド(JST日付)」基準の判定に統一する。
+        const allowedDateKeys = new Set();
+        for (let i = 0; i < days; i++) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            allowedDateKeys.add(jstDateStr(d));
+        }
 
-        // 期間フィルター適用
-        const filtered = allRecords.filter(r => isMilk(r) && new Date(r.timestamp) >= cutoffDate); // ← isMilk(r) && を追加
+        // 期間フィルター適用（dateフィールド基準。グラフ側と同じ判定にすることで表示のズレを防ぐ）
+        const filtered = allRecords.filter(r => isMilk(r) && allowedDateKeys.has(r.date));
 
         // 評価（統計）の計算
         calculateStats(filtered);
