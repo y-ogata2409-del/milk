@@ -3655,5 +3655,14 @@
     "timestamp": "2026-09-08T13:06:43.139Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtt1xbbc_gnguhx",
+    "date": "2026/09/09",
+    "time": "04:17",
+    "timestamp": "2026-09-08T19:17:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
