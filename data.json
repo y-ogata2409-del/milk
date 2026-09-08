@@ -3628,5 +3628,14 @@
     "timestamp": "2026-09-08T02:03:00.000Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mts907nf_ad3rms",
+    "date": "2026/09/08",
+    "time": "14:47",
+    "timestamp": "2026-09-08T05:47:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
