@@ -3700,5 +3700,14 @@
     "timestamp": "2026-09-09T08:58:49.330Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtu4gpce_he1dbt",
+    "date": "2026/09/09",
+    "time": "22:01",
+    "timestamp": "2026-09-09T13:01:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
