@@ -3763,5 +3763,14 @@
     "timestamp": "2026-09-10T09:21:00.000Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtvcl0mr_dgdtbn",
+    "date": "2026/09/10",
+    "time": "18:51",
+    "timestamp": "2026-09-10T09:51:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
