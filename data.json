@@ -3745,5 +3745,14 @@
     "timestamp": "2026-09-10T01:15:00.000Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtv3qvfo_ppoj2b",
+    "date": "2026/09/10",
+    "time": "14:05",
+    "timestamp": "2026-09-10T05:05:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
