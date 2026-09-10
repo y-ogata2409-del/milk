@@ -3772,5 +3772,14 @@
     "timestamp": "2026-09-10T12:24:00.000Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtvia9pr_43u9ym",
+    "date": "2026/09/10",
+    "time": "21:31",
+    "timestamp": "2026-09-10T12:31:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
