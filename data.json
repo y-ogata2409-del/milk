@@ -3799,5 +3799,14 @@
     "timestamp": "2026-09-11T02:14:36.037Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtwhy5vm_mb34u9",
+    "date": "2026/09/11",
+    "time": "14:09",
+    "timestamp": "2026-09-11T05:09:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
