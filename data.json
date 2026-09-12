@@ -3853,5 +3853,14 @@
     "timestamp": "2026-09-12T00:50:00.000Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mtxwfpmn_hymvt8",
+    "date": "2026/09/12",
+    "time": "13:42",
+    "timestamp": "2026-09-12T04:42:00.000Z",
+    "amount": 130,
+    "memo": ""
   }
 ]
