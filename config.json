@@ -1,9 +1,21 @@
 {
-  "buttonAmounts": [100, 120, 140],
+  "buttonAmounts": [
+    100,
+    120,
+    140
+  ],
   "notifyEnabled": true,
-  "notifyMinutes": 180,
+  "notifyMinutes": 240,
   "notifySettings": [
-    { "person": "you", "method": "email", "email": "tamago1yen@gmail.com" },
-    { "person": "wife", "method": "auto", "email": "chami.2ya_o5@icloud.com" }
+    {
+      "person": "you",
+      "method": "email",
+      "email": "tamago1yen@gmail.com"
+    },
+    {
+      "person": "wife",
+      "method": "auto",
+      "email": "chami.2ya_o5@icloud.com"
+    }
   ]
 }
