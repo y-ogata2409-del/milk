@@ -741,8 +741,13 @@ async function submitRecord() {
     }
     if (count > 0) {
         const avgMs = totalDiffMs / count;
-        const avgHrs = Math.floor(avgMs / 3600000);
-        const avgMins = Math.round((avgMs % 3600000) / 60000);
+        // ← 修正：以前は時間を切り捨て、分を四捨五入と別々に丸めていたため、
+        //   分の丸めで60分になった場合に「3時間60分」のような表記になる不具合があった。
+        //   まず合計を「分」単位で四捨五入してから、あらためて時間と分に分解することで、
+        //   繰り上がりが正しく反映されるようにする。
+        const totalAvgMins = Math.round(avgMs / 60000);
+        const avgHrs = Math.floor(totalAvgMins / 60);
+        const avgMins = totalAvgMins % 60;
         document.getElementById('stat-avg-interval').innerText = `${avgHrs}時間${avgMins}分`;
     } else {
         document.getElementById('stat-avg-interval').innerText = '-';
