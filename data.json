@@ -4339,5 +4339,14 @@
     "timestamp": "2026-09-20T23:10:00.000Z",
     "amount": 150,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "muansrir_fmfsl7",
+    "date": "2026/09/21",
+    "time": "12:01",
+    "timestamp": "2026-09-21T03:01:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
