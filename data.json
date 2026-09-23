@@ -4465,5 +4465,14 @@
     "timestamp": "2026-09-23T13:00:00.000Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "muefeey8_kdnp5f",
+    "date": "2026/09/24",
+    "time": "03:17",
+    "timestamp": "2026-09-23T18:17:00.000Z",
+    "amount": 180,
+    "memo": ""
   }
 ]
