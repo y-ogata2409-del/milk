@@ -4492,5 +4492,14 @@
     "timestamp": "2026-09-24T04:13:00.000Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mufavtmo_nrfkx4",
+    "date": "2026/09/24",
+    "time": "16:48",
+    "timestamp": "2026-09-24T07:48:00.000Z",
+    "amount": 180,
+    "memo": ""
   }
 ]
