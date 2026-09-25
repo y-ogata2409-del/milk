@@ -4546,5 +4546,14 @@
     "timestamp": "2026-09-25T01:40:00.000Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mugjiihr_eo08ue",
+    "date": "2026/09/25",
+    "time": "14:48",
+    "timestamp": "2026-09-25T05:48:00.000Z",
+    "amount": 180,
+    "memo": ""
   }
 ]
