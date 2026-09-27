@@ -4679,5 +4679,14 @@
     "date": "2026/09/26",
     "content": "体重6.30",
     "transcribed": false
+  },
+  {
+    "type": "milk",
+    "id": "mujuhekn_8nlrrs",
+    "date": "2026/09/27",
+    "time": "22:18",
+    "timestamp": "2026-09-27T13:18:00.000Z",
+    "amount": 180,
+    "memo": ""
   }
 ]
