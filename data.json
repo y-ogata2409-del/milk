@@ -4672,5 +4672,12 @@
     "timestamp": "2026-09-27T10:19:00.000Z",
     "amount": 160,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1790504437139_9egi0o",
+    "date": "2026/09/26",
+    "content": "体重6.30",
+    "transcribed": false
   }
 ]
