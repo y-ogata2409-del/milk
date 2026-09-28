@@ -4715,5 +4715,14 @@
     "timestamp": "2026-09-28T03:17:00.000Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mukxcpfs_amax1w",
+    "date": "2026/09/28",
+    "time": "16:27",
+    "timestamp": "2026-09-28T07:27:00.000Z",
+    "amount": 180,
+    "memo": ""
   }
 ]
