@@ -4733,5 +4733,14 @@
     "timestamp": "2026-09-28T10:53:14.432Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mulgy196_p2b5cx",
+    "date": "2026/09/29",
+    "time": "01:35",
+    "timestamp": "2026-09-28T16:35:00.000Z",
+    "amount": 180,
+    "memo": ""
   }
 ]
