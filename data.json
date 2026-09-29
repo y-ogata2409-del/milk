@@ -4769,5 +4769,14 @@
     "timestamp": "2026-09-29T06:41:00.000Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mumjsbog_stmza9",
+    "date": "2026/09/29",
+    "time": "19:42",
+    "timestamp": "2026-09-29T10:42:00.000Z",
+    "amount": 180,
+    "memo": ""
   }
 ]
