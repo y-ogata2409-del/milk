@@ -4904,5 +4904,14 @@
     "timestamp": "2026-10-01T23:50:00.000Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "muqfdw1t_klmkc7",
+    "date": "2026/10/02",
+    "time": "12:50",
+    "timestamp": "2026-10-02T03:50:00.000Z",
+    "amount": 180,
+    "memo": ""
   }
 ]
