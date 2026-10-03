@@ -361,6 +361,7 @@
         fetchInitialData();
         loadHistoryData(); // ← 追加：ページ読み込み時に履歴・グラフも先読みしておく
         updateBabyAge(); // ← 追加：ページ読み込み時に1回表示
+        loadLineConfig(true); // ← 追加：経過時間の文字色のしきい値(notifyMinutes)を、通知タブを開かなくても最初から正しく反映させるため(silent=trueで失敗時はalertしない)
     
         document.getElementById('record-time').addEventListener('input', () => {
             recordTimeManuallyChanged = true;
@@ -500,10 +501,18 @@ document.addEventListener('visibilitychange', () => {
         const diffMins = Math.floor((diffMs % 3600000) / 60000);
         elapsedEl.innerText = `${diffHrs}時間${diffMins}分`;
 
-        // ← 追加：経過時間に応じて文字色を変える（2時間以上でオレンジ、3時間以上で赤）
-        if (diffMs >= 3 * 3600000) {
+        // ← 変更：文字色のしきい値を固定値(2時間/3時間)ではなく、
+        //   通知設定の「何分経過したら通知するか」(currentLineConfig.notifyMinutes)から動的に算出する。
+        //   赤＝設定時間そのものに到達した時点。
+        //   オレンジ＝赤のしきい値の2/3経過した時点
+        //   （この比率は、以前の「3時間で赤・2時間でオレンジ」の関係と同じになるよう決めている。
+        //     そのため通知設定が初期値の180分(3時間)のままなら、これまでと全く同じ見た目になる）。
+        const redThresholdMs = (currentLineConfig.notifyMinutes || 180) * 60000;
+        const orangeThresholdMs = redThresholdMs * (2 / 3);
+
+        if (diffMs >= redThresholdMs) {
             elapsedEl.style.color = '#e74c3c';
-        } else if (diffMs >= 2 * 3600000) {
+        } else if (diffMs >= orangeThresholdMs) {
             elapsedEl.style.color = '#f39c12';
         } else {
             elapsedEl.style.color = '';
@@ -1203,7 +1212,7 @@ async function submitRecord() {
 // ==========================================================
 let currentLineConfig = { buttonAmounts: [], notifyEnabled: true, notifyMinutes: 180 };
 
-async function loadLineConfig() {
+async function loadLineConfig(silent) {
     try {
         const res = await fetch(`${WORKER_URL}?target=config&t=${Date.now()}`);
         const json = await res.json();
@@ -1231,7 +1240,11 @@ async function loadLineConfig() {
 
         renderLineAmountList();
     } catch (err) {
-        alert('設定の読み込みに失敗しました: ' + err.message);
+        if (silent) {
+            console.error('設定の読み込みに失敗しました(バックグラウンド取得): ' + err.message);
+        } else {
+            alert('設定の読み込みに失敗しました: ' + err.message);
+        }
     }
 }
 
