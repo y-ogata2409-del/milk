@@ -4985,5 +4985,14 @@
     "timestamp": "2026-10-03T13:04:00.000Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mustlj57_9x10uv",
+    "date": "2026/10/04",
+    "time": "04:03",
+    "timestamp": "2026-10-03T19:03:00.000Z",
+    "amount": 160,
+    "memo": ""
   }
 ]
