@@ -5030,5 +5030,14 @@
     "timestamp": "2026-10-04T08:58:00.000Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mutte5v1_rd11pj",
+    "date": "2026/10/04",
+    "time": "21:46",
+    "timestamp": "2026-10-04T12:46:00.000Z",
+    "amount": 180,
+    "memo": ""
   }
 ]
