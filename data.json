@@ -5075,5 +5075,14 @@
     "timestamp": "2026-10-05T06:59:00.000Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "muv5jwl6_wpdxl8",
+    "date": "2026/10/05",
+    "time": "19:50",
+    "timestamp": "2026-10-05T10:50:00.000Z",
+    "amount": 180,
+    "memo": ""
   }
 ]
