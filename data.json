@@ -5165,5 +5165,14 @@
     "timestamp": "2026-10-07T03:37:00.876Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "muxsi5jl_cisicb",
+    "date": "2026/10/07",
+    "time": "16:32",
+    "timestamp": "2026-10-07T07:32:00.000Z",
+    "amount": 180,
+    "memo": ""
   }
 ]
