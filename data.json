@@ -5201,5 +5201,14 @@
     "timestamp": "2026-10-07T23:36:00.000Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "muyzopgd_dbunkp",
+    "date": "2026/10/08",
+    "time": "12:41",
+    "timestamp": "2026-10-08T03:41:00.000Z",
+    "amount": 180,
+    "memo": ""
   }
 ]
