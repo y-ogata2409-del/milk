@@ -5291,5 +5291,14 @@
     "timestamp": "2026-10-09T21:01:15.699Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mv1vpns8_be2z68",
+    "date": "2026/10/10",
+    "time": "10:30",
+    "timestamp": "2026-10-10T01:30:00.000Z",
+    "amount": 180,
+    "memo": ""
   }
 ]
