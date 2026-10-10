@@ -5327,5 +5327,14 @@
     "timestamp": "2026-10-10T12:59:00.000Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mv2p3mik_lsihip",
+    "date": "2026/10/11",
+    "time": "02:55",
+    "timestamp": "2026-10-10T17:55:00.000Z",
+    "amount": 180,
+    "memo": ""
   }
 ]
