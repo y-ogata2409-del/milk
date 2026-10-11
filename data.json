@@ -5345,5 +5345,14 @@
     "timestamp": "2026-10-10T21:32:00.000Z",
     "amount": 180,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mv35uscx_g1dun7",
+    "date": "2026/10/11",
+    "time": "10:44",
+    "timestamp": "2026-10-11T01:44:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
