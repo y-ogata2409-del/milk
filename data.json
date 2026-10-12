@@ -5431,5 +5431,14 @@
     "date": "2026/10/01",
     "content": "首持ち上げ",
     "transcribed": false
+  },
+  {
+    "type": "milk",
+    "id": "mv5khspt_jntsqs",
+    "date": "2026/10/13",
+    "time": "03:10",
+    "timestamp": "2026-10-12T18:10:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
