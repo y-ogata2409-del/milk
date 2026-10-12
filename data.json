@@ -5417,5 +5417,12 @@
     "timestamp": "2026-10-12T11:29:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1791804094594_j78npk",
+    "date": "2026/10/11",
+    "content": "ミルク量を200mlへ",
+    "transcribed": false
   }
 ]
