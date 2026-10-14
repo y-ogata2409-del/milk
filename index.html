@@ -1335,7 +1335,21 @@ function updateBabyAge() {
 
     const diffDays = Math.floor((today - birth) / 86400000) + 1; // 誕生日を1日目とする
 
-    el.innerText = `👶 生後 ${diffDays}日目`;
+    // ○ヶ月＋○日：誕生日と同じ日付が来るたびに1ヶ月加算する暦ベースの数え方
+    let months = (today.getFullYear() - birth.getFullYear()) * 12 + (today.getMonth() - birth.getMonth());
+    if (today.getDate() < birth.getDate()) months--;
+    const anchor = addMonthsClamped(birth, months); // 誕生日からmonthsヶ月後の日付
+    const extraDays = Math.round((today - anchor) / 86400000);
+
+    el.innerText = `👶 生後 ${diffDays}日目（${months}ヶ月${extraDays}日）`;
+}
+
+// 日付にnヶ月を足す。31日生まれで翌月が30日までなどの場合は、その月の末日に丸める
+function addMonthsClamped(date, months) {
+    const y = date.getFullYear();
+    const m = date.getMonth() + months;
+    const lastDay = new Date(y, m + 1, 0).getDate();
+    return new Date(y, m, Math.min(date.getDate(), lastDay));
 }
 </script>
 </body>
