@@ -67,6 +67,11 @@
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
+        /* GitHubトークンの期限が近づいたときの警告バナー(全タブ共通で上部に表示) */
+        .token-banner { border-radius: 12px; padding: 12px 14px; margin-bottom: 15px; font-size: 0.85rem; line-height: 1.5; background: #fff4e0; border: 1px solid #f39c12; color: #7a4b00; }
+        .token-banner.urgent { background: #fdecea; border-color: #e74c3c; color: #8a1f14; }
+        .token-banner .token-banner-title { font-weight: bold; font-size: 0.95rem; margin-bottom: 4px; }
+        .token-banner .token-banner-steps { font-size: 0.75rem; opacity: 0.85; margin-top: 6px; }
     </style>
     <!-- ファビコン -->
 <link rel="icon" type="image/png" href="icon.png">
@@ -95,11 +100,14 @@
         <div class="tab" onclick="switchTab('line')">通知</div>
     </div>
 
+    <!-- GitHubトークンの期限が近づいたときだけ表示される警告(普段は非表示) -->
+    <div id="token-expiry-banner" class="token-banner" style="display:none;"></div>
+
     <div id="page-record" class="page active">
         <div class="card">
             <div class="timer-box">
                 <span id="baby-age" style="display:block; font-size:0.9rem; color:#7f8c8d; margin-bottom:6px;"></span>
-                🍼 前回のミルクから <span id="elapsed-time">計算中...</span> 経過<br>
+                前回の🍼から <span id="elapsed-time">計算中...</span> 経過<br>
                 <span style="font-size:0.85rem; color:#7f8c8d;">前回の量: <span id="last-amount">-</span></span>
             </div>
             <h2>ミルク記録</h2>
@@ -520,10 +528,46 @@ document.addEventListener('visibilitychange', () => {
     }
 
     // 読み込み：Cloudflare Worker経由でGitHubの最新データを取得(キャッシュの遅延なし)
+    // GitHubトークンの期限が、あと何日以内になったら警告を出すか
+    const TOKEN_WARN_DAYS = 30;   // この日数以内になったら黄色の警告
+    const TOKEN_URGENT_DAYS = 7;  // この日数以内になったら赤色の警告
+
+    // Workerから届いたトークンの有効期限(ISO文字列)をもとに、警告バナーを表示/非表示にする。
+    // 期限情報が無い(null)場合や、まだ余裕がある場合は何も表示しない。
+    function updateTokenExpiryBanner(expiresAtIso) {
+        const el = document.getElementById('token-expiry-banner');
+        if (!el) return;
+        if (!expiresAtIso) { el.style.display = 'none'; return; }
+
+        const expires = new Date(expiresAtIso);
+        if (isNaN(expires.getTime())) { el.style.display = 'none'; return; }
+
+        const daysLeft = Math.ceil((expires - new Date()) / 86400000);
+        if (daysLeft > TOKEN_WARN_DAYS) { el.style.display = 'none'; return; }
+
+        const expiresStr = jstDateStr(expires); // yyyy/MM/dd(日本時間)
+        const title = daysLeft > 0
+            ? `⚠️ データ保存用のGitHubトークンの期限まで、あと${daysLeft}日です（${expiresStr}）`
+            : `⚠️ データ保存用のGitHubトークンの期限が切れています（${expiresStr}）`;
+
+        el.className = 'token-banner' + (daysLeft <= TOKEN_URGENT_DAYS ? ' urgent' : '');
+        el.innerHTML = '';
+        const t = document.createElement('div');
+        t.className = 'token-banner-title';
+        t.innerText = title;
+        const s = document.createElement('div');
+        s.className = 'token-banner-steps';
+        s.innerText = '更新方法：GitHub → Settings → Developer settings → Personal access tokens で再生成(Regenerate)し、新しいトークンをCloudflareのWorker設定「GITHUB_TOKEN」に貼り替えてください。';
+        el.appendChild(t);
+        el.appendChild(s);
+        el.style.display = 'block';
+    }
+
     async function fetchRecordsFromGitHub() {
         const res = await fetch(`${WORKER_URL}?action=getRecords&t=${Date.now()}`);
         const json = await res.json();
         if (!json.success) throw new Error(json.error || 'データ取得に失敗しました');
+        updateTokenExpiryBanner(json.tokenExpiresAt); // ← 追加：トークン期限が近ければ警告を出す
     
         // GitHub上の実データは登録順(古い順)で並んでいるため、
         // 従来通り「新しい順」に統一してから返す
