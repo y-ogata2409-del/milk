@@ -5665,5 +5665,14 @@
     "timestamp": "2026-10-17T19:21:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvd22kg6_jmelvk",
+    "date": "2026/10/18",
+    "time": "08:43",
+    "timestamp": "2026-10-17T23:43:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
