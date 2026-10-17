@@ -5647,5 +5647,14 @@
     "timestamp": "2026-10-17T07:12:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvcazz2l_fohzic",
+    "date": "2026/10/17",
+    "time": "20:18",
+    "timestamp": "2026-10-17T11:18:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
