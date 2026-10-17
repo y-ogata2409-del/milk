@@ -5656,5 +5656,14 @@
     "timestamp": "2026-10-17T11:18:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvcs9akn_uiswmx",
+    "date": "2026/10/18",
+    "time": "04:21",
+    "timestamp": "2026-10-17T19:21:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
