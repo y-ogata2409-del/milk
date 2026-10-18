@@ -5674,5 +5674,14 @@
     "timestamp": "2026-10-17T23:43:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvd9budx_vdc095",
+    "date": "2026/10/18",
+    "time": "12:19",
+    "timestamp": "2026-10-18T03:19:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
