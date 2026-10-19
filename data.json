@@ -5737,5 +5737,12 @@
     "timestamp": "2026-10-19T08:36:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1792403763685_0wij7b",
+    "date": "2026/10/19",
+    "content": "ボディソープをあわぴよ→ビオレに変更",
+    "transcribed": false
   }
 ]
