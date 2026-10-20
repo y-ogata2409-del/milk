@@ -5776,5 +5776,14 @@
     "timestamp": "2026-10-19T20:08:27.869Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvfzxa90_dhprqc",
+    "date": "2026/10/20",
+    "time": "10:19",
+    "timestamp": "2026-10-20T01:19:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
