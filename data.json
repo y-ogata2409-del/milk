@@ -5866,5 +5866,12 @@
     "timestamp": "2026-10-21T19:28:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1792620987221_zqpbgt",
+    "date": "2026/10/22",
+    "content": "見たい場所に顔を向けることができる",
+    "transcribed": false
   }
 ]
