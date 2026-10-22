@@ -5873,5 +5873,14 @@
     "date": "2026/10/22",
     "content": "見たい場所に顔を向けることができる",
     "transcribed": false
+  },
+  {
+    "type": "milk",
+    "id": "mviy73jv_w5jpsi",
+    "date": "2026/10/22",
+    "time": "09:18",
+    "timestamp": "2026-10-22T00:18:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
