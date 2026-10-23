@@ -5954,5 +5954,14 @@
     "timestamp": "2026-10-23T12:23:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvlbaqjw_rdbczn",
+    "date": "2026/10/24",
+    "time": "03:37",
+    "timestamp": "2026-10-23T18:37:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
