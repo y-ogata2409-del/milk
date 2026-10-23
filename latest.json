@@ -1,6 +1,24 @@
 [
   {
     "type": "milk",
+    "id": "mvkumjrs_42kiwk",
+    "date": "2026/10/23",
+    "time": "16:43",
+    "timestamp": "2026-10-23T07:43:00.000Z",
+    "amount": 200,
+    "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "2026-10-23T04:14:05.902Z",
+    "date": "2026/10/23",
+    "time": "13:14",
+    "timestamp": "2026-10-23T04:14:05.902Z",
+    "amount": 200,
+    "memo": ""
+  },
+  {
+    "type": "milk",
     "id": "2026-10-22T23:31:48.225Z",
     "date": "2026/10/23",
     "time": "08:31",
@@ -68,24 +86,6 @@
     "date": "2026/10/22",
     "time": "00:46",
     "timestamp": "2026-10-21T15:46:00.000Z",
-    "amount": 200,
-    "memo": ""
-  },
-  {
-    "type": "milk",
-    "id": "mvhzk7uw_yltgsz",
-    "date": "2026/10/21",
-    "time": "19:45",
-    "timestamp": "2026-10-21T10:45:00.000Z",
-    "amount": 200,
-    "memo": ""
-  },
-  {
-    "type": "milk",
-    "id": "mvhwo2ld_n8mpo3",
-    "date": "2026/10/21",
-    "time": "16:13",
-    "timestamp": "2026-10-21T07:13:00.000Z",
     "amount": 200,
     "memo": ""
   }
