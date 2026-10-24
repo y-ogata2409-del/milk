@@ -5990,5 +5990,14 @@
     "timestamp": "2026-10-24T08:30:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvmc9rah_njcvtg",
+    "date": "2026/10/24",
+    "time": "20:52",
+    "timestamp": "2026-10-24T11:52:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
