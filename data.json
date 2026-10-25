@@ -6017,5 +6017,14 @@
     "timestamp": "2026-10-24T23:13:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvn8yaqi_dx2afk",
+    "date": "2026/10/25",
+    "time": "12:07",
+    "timestamp": "2026-10-25T03:07:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
