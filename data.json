@@ -6071,5 +6071,14 @@
     "timestamp": "2026-10-26T02:13:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvowtuhw_opw2wi",
+    "date": "2026/10/26",
+    "time": "15:50",
+    "timestamp": "2026-10-26T06:50:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
