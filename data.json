@@ -6089,5 +6089,12 @@
     "timestamp": "2026-10-26T10:41:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1793036366273_80h1sv",
+    "date": "2026/10/24",
+    "content": "3ヶ月検診",
+    "transcribed": false
   }
 ]
