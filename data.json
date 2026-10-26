@@ -6096,5 +6096,14 @@
     "date": "2026/10/24",
     "content": "3ヶ月検診",
     "transcribed": false
+  },
+  {
+    "type": "milk",
+    "id": "mvpkck0d_4c3eh9",
+    "date": "2026/10/27",
+    "time": "03:01",
+    "timestamp": "2026-10-26T18:01:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
