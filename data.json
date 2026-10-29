@@ -6231,5 +6231,12 @@
     "timestamp": "2026-10-29T12:19:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1793278539396_w71wvr",
+    "date": "2026/10/29",
+    "content": "うつ伏せで顔を上げられる",
+    "transcribed": false
   }
 ]
