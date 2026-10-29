@@ -6222,5 +6222,14 @@
     "timestamp": "2026-10-29T08:14:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvtig279_d5zrsc",
+    "date": "2026/10/29",
+    "time": "21:19",
+    "timestamp": "2026-10-29T12:19:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
