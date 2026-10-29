@@ -6245,5 +6245,14 @@
     "date": "2026/10/29",
     "content": "こちらが笑うと一緒に笑う",
     "transcribed": false
+  },
+  {
+    "type": "milk",
+    "id": "mvtul185_d9f8zh",
+    "date": "2026/10/30",
+    "time": "02:59",
+    "timestamp": "2026-10-29T17:59:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
