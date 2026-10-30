@@ -6281,5 +6281,12 @@
     "timestamp": "2026-10-30T08:59:00.000Z",
     "amount": 100,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1793359498483_z7rtwi",
+    "date": "2026/09/30",
+    "content": "手に持ったものを口に運ぶことができる",
+    "transcribed": false
   }
 ]
