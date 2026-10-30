@@ -6272,5 +6272,14 @@
     "timestamp": "2026-10-30T03:25:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvuqr8ph_et8x9u",
+    "date": "2026/10/30",
+    "time": "17:59",
+    "timestamp": "2026-10-30T08:59:00.000Z",
+    "amount": 100,
+    "memo": ""
   }
 ]
