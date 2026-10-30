@@ -6254,5 +6254,14 @@
     "timestamp": "2026-10-29T17:59:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvubnfl2_kuciym",
+    "date": "2026/10/30",
+    "time": "08:33",
+    "timestamp": "2026-10-29T23:33:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
