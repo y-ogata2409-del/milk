@@ -6324,5 +6324,14 @@
     "timestamp": "2026-10-31T01:13:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvw16ycd_tawcpv",
+    "date": "2026/10/31",
+    "time": "14:44",
+    "timestamp": "2026-10-31T05:44:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
