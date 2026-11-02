@@ -6414,5 +6414,12 @@
     "timestamp": "2026-11-02T02:45:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "memo",
+    "id": "memo_1793598412064_o9q7rp",
+    "date": "2026/11/02",
+    "content": "初⭐️昼寝うつ伏せ",
+    "transcribed": false
   }
 ]
