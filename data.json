@@ -6396,5 +6396,14 @@
     "timestamp": "2026-11-01T18:24:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvympzue_9fpgys",
+    "date": "2026/11/02",
+    "time": "08:13",
+    "timestamp": "2026-11-01T23:13:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
