@@ -6430,5 +6430,14 @@
     "timestamp": "2026-11-02T08:33:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mvz8buvs_hm2k0b",
+    "date": "2026/11/02",
+    "time": "21:22",
+    "timestamp": "2026-11-02T12:22:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
