@@ -20,6 +20,26 @@
         .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .timer-box { text-align: center; background: #eef7f9; border-radius: 12px; padding: 12px; margin-bottom: 20px; border-left: 5px solid var(--primary-color); }
         .timer-box span { font-weight: bold; color: var(--primary-color); font-size: 1.25rem; }
+
+        /* ===== ミルク残量メーター（車のガソリンメーター風） ===== */
+        .fuel-wrap { position: relative; margin-top: 12px; }
+        #fuel-svg { display: block; width: 100%; max-width: 240px; margin: 0 auto; }
+        .fuel-info { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 2px; }
+        .fuel-lamp { font-size: 1.5rem; line-height: 1; filter: grayscale(1) opacity(0.3); transition: filter 0.3s; }
+        .fuel-lamp.low { filter: drop-shadow(0 0 4px #f39c12); }
+        .fuel-lamp.empty { filter: drop-shadow(0 0 6px #e74c3c); animation: fuelBlink 1s steps(2, start) infinite; }
+        .fuel-text { text-align: left; line-height: 1.35; }
+        #fuel-percent { font-weight: bold; font-size: 0.95rem; }
+        #fuel-remain { font-size: 0.8rem; color: #7f8c8d; }
+        #fuel-remain.empty { color: #e74c3c; font-weight: bold; animation: fuelBlink 1s steps(2, start) infinite; }
+        .fuel-sparkle { position: absolute; opacity: 0; font-size: 1.2rem; pointer-events: none; }
+        .fuel-sparkle.pop { animation: fuelPop 1.3s ease-out forwards; }
+        @keyframes fuelBlink { 50% { opacity: 0.25; } }
+        @keyframes fuelPop {
+            0%   { opacity: 0; transform: scale(0.3) translateY(8px); }
+            30%  { opacity: 1; transform: scale(1.3) translateY(0); }
+            100% { opacity: 0; transform: scale(0.8) translateY(-16px); }
+        }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 6px; font-weight: bold; font-size: 0.9rem; }
         input[type="datetime-local"] { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; }
@@ -109,6 +129,24 @@
                 <span id="baby-age" style="display:block; font-size:0.9rem; color:#7f8c8d; margin-bottom:6px;"></span>
                 前回の🍼から <span id="elapsed-time">計算中...</span> 経過<br>
                 <span style="font-size:0.85rem; color:#7f8c8d;">前回の量: <span id="last-amount">-</span></span>
+                <!-- 車のガソリンメーター風の「ミルク残量」表示（通知時間で空になる） -->
+                <div class="fuel-wrap">
+                    <svg id="fuel-svg" viewBox="0 0 200 122" role="img" aria-label="ミルク残量メーター"></svg>
+                    <div id="fuel-sparkles">
+                        <div class="fuel-sparkle" style="left:14%; top:10%;">✨</div>
+                        <div class="fuel-sparkle" style="left:80%; top:6%;">✨</div>
+                        <div class="fuel-sparkle" style="left:46%; top:-4%;">🍼</div>
+                        <div class="fuel-sparkle" style="left:68%; top:44%;">✨</div>
+                        <div class="fuel-sparkle" style="left:24%; top:46%;">✨</div>
+                    </div>
+                    <div class="fuel-info">
+                        <div id="fuel-lamp" class="fuel-lamp">⛽</div>
+                        <div class="fuel-text">
+                            <div id="fuel-percent">ミルク残量 --%</div>
+                            <div id="fuel-remain"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <h2>ミルク記録</h2>
             <div class="form-group">
@@ -497,33 +535,216 @@ document.addEventListener('visibilitychange', () => {
         if (!lastRecordTime) {
             elapsedEl.innerText = '--時間--分';
             elapsedEl.style.color = '';
+            updateFuelGauge(null, 0);
             return;
         }
+        const notifyMs = (currentLineConfig.notifyMinutes || 180) * 60000;
         const diffMs = new Date() - new Date(lastRecordTime);
         if (diffMs < 0) {
             elapsedEl.innerText = '0分';
             elapsedEl.style.color = '';
+            updateFuelGauge(1, notifyMs);
             return;
         }
         const diffHrs = Math.floor(diffMs / 3600000);
         const diffMins = Math.floor((diffMs % 3600000) / 60000);
         elapsedEl.innerText = `${diffHrs}時間${diffMins}分`;
 
-        // ← 変更：文字色のしきい値を固定値(2時間/3時間)ではなく、
-        //   通知設定の「何分経過したら通知するか」(currentLineConfig.notifyMinutes)から動的に算出する。
-        //   赤＝設定時間そのものに到達した時点。
-        //   オレンジ＝赤のしきい値の2/3経過した時点
-        //   （この比率は、以前の「3時間で赤・2時間でオレンジ」の関係と同じになるよう決めている。
-        //     そのため通知設定が初期値の180分(3時間)のままなら、これまでと全く同じ見た目になる）。
-        const redThresholdMs = (currentLineConfig.notifyMinutes || 180) * 60000;
-        const orangeThresholdMs = redThresholdMs * (2 / 3);
+        // ← 変更：3色(通常/オレンジ/赤)の段階表示をやめ、経過に合わせて色が少しずつ変わるグラデーションにした。
+        //   基準は従来どおり、通知設定の「何分経過したら通知するか」(currentLineConfig.notifyMinutes)。
+        //   進み具合(0〜1)＝経過時間 ÷ 通知時間。1(=通知時間ちょうど)で赤になる。
+        //   緑 → 黄緑 → 黄 → オレンジ → 赤 と変化し、通知時間を過ぎたらさらに濃い赤へ(通知時間の1.5倍で最大)。
+        elapsedEl.style.color = elapsedColor(diffMs / notifyMs);
 
-        if (diffMs >= redThresholdMs) {
-            elapsedEl.style.color = '#e74c3c';
-        } else if (diffMs >= orangeThresholdMs) {
-            elapsedEl.style.color = '#f39c12';
-        } else {
-            elapsedEl.style.color = '';
+        // ← 追加：ガソリンメーター風の残量表示。直後=満タン(1)、通知時間=空(0)。
+        updateFuelGauge(Math.max(0, 1 - diffMs / notifyMs), Math.max(0, notifyMs - diffMs));
+    }
+
+    // ==========================================================
+    // ミルク残量メーター（車のガソリンメーター風）
+    //   f = 残量(0=空っぽ E, 1=満タン F)。針は E(左) から F(右) へ 180度で振れる。
+    // ==========================================================
+    const FUEL_CX = 100, FUEL_CY = 102, FUEL_R = 78;
+    const fuelGauge = { built: false, f: 0, target: 0, started: false, busy: false, celebrating: false, token: 0, refillId: 0, remainMs: 0 };
+
+    function fuelPoint(f, r) {
+        const a = Math.PI * (1 - f); // f=0 で真左、f=1 で真右
+        return [FUEL_CX + r * Math.cos(a), FUEL_CY - r * Math.sin(a)];
+    }
+
+    function ensureFuelGauge() {
+        if (fuelGauge.built) return;
+        const svg = document.getElementById('fuel-svg');
+        if (!svg) return;
+        // 色の帯（空に近いほど赤、満タンに近いほど緑）
+        const bands = [[0, 0.2, '#e74c3c'], [0.2, 0.45, '#f39c12'], [0.45, 0.65, '#e2b007'], [0.65, 1, '#27ae60']];
+        let html = '';
+        bands.forEach(([f0, f1, color]) => {
+            const [x0, y0] = fuelPoint(f0 + 0.004, FUEL_R);
+            const [x1, y1] = fuelPoint(f1 - 0.004, FUEL_R);
+            html += `<path d="M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${FUEL_R} ${FUEL_R} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}" fill="none" stroke="${color}" stroke-width="14"/>`;
+        });
+        // 目盛り（8分割。E・1/2・F は長め）
+        for (let i = 0; i <= 8; i++) {
+            const f = i / 8;
+            const long = (i === 0 || i === 4 || i === 8);
+            const [x0, y0] = fuelPoint(f, long ? 60 : 64);
+            const [x1, y1] = fuelPoint(f, 68);
+            html += `<line x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}" stroke="#7f8c8d" stroke-width="${long ? 2 : 1}" stroke-linecap="round"/>`;
+        }
+        html += `<text x="22" y="119" text-anchor="middle" font-size="12" font-weight="bold" fill="#e74c3c">E</text>`;
+        html += `<text x="178" y="119" text-anchor="middle" font-size="12" font-weight="bold" fill="#27ae60">F</text>`;
+        html += `<text x="100" y="11" text-anchor="middle" font-size="9" fill="#7f8c8d">1/2</text>`;
+        // 針（真左=E を向いた状態で描き、回転で動かす）と中心の軸
+        html += `<g id="fuel-needle" transform="rotate(0 ${FUEL_CX} ${FUEL_CY})"><polygon points="${FUEL_CX - 68},${FUEL_CY} ${FUEL_CX},${FUEL_CY - 3.5} ${FUEL_CX},${FUEL_CY + 3.5}" fill="#e74c3c"/></g>`;
+        html += `<circle cx="${FUEL_CX}" cy="${FUEL_CY}" r="7" fill="#34495e"/><circle cx="${FUEL_CX}" cy="${FUEL_CY}" r="2.5" fill="#ecf0f1"/>`;
+        svg.innerHTML = html;
+        fuelGauge.built = true;
+        setNeedle(0);
+    }
+
+    function setNeedle(f) {
+        const needle = document.getElementById('fuel-needle');
+        if (!needle) return;
+        f = Math.max(-0.02, Math.min(1.08, f)); // 勢い余って少しだけ振り切れる分だけ許容
+        fuelGauge.f = f;
+        needle.setAttribute('transform', `rotate(${(f * 180).toFixed(2)} ${FUEL_CX} ${FUEL_CY})`);
+    }
+
+    const fuelEaseOutBack = t => { const c1 = 1.2, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+    const fuelEaseOutQuad = t => 1 - (1 - t) * (1 - t);
+    const fuelEaseInOut = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const fuelSleep = ms => new Promise(r => setTimeout(r, ms));
+
+    // 針を from → to へ動かす。別の動きが始まったら、その時点で中断して終わる
+    function animateNeedle(from, to, ms, ease) {
+        return new Promise(resolve => {
+            const my = ++fuelGauge.token;
+            const t0 = performance.now();
+            function step(now) {
+                if (fuelGauge.token !== my) return resolve();
+                const t = Math.min(1, (now - t0) / ms);
+                setNeedle(from + (to - from) * ease(t));
+                if (t < 1) requestAnimationFrame(step); else resolve();
+            }
+            requestAnimationFrame(step);
+        });
+    }
+
+    function setFuelText(percentText, remainText, color, remainEmpty) {
+        const p = document.getElementById('fuel-percent');
+        const r = document.getElementById('fuel-remain');
+        if (!p || !r) return;
+        if (p.innerText !== percentText) p.innerText = percentText;
+        if (color !== undefined) p.style.color = color;
+        if (r.innerText !== remainText) r.innerText = remainText;
+        r.classList.toggle('empty', !!remainEmpty);
+    }
+
+    function updateFuelGauge(f, remainMs) {
+        ensureFuelGauge();
+        if (!fuelGauge.built) return;
+        const lamp = document.getElementById('fuel-lamp');
+
+        if (f === null) { // 記録がまだ読み込めていない／無いとき
+            setFuelText('ミルク残量 --%', '', '', false);
+            if (lamp) lamp.className = 'fuel-lamp';
+            return;
+        }
+        fuelGauge.target = f;
+        fuelGauge.remainMs = remainMs;
+
+        if (!fuelGauge.celebrating) {
+            const pct = Math.round(f * 100);
+            if (f <= 0) {
+                setFuelText('ミルク残量 0%', 'ガス欠！ミルクの時間です', elapsedColor(2), true);
+            } else {
+                const h = Math.floor(remainMs / 3600000);
+                const m = Math.floor((remainMs % 3600000) / 60000);
+                setFuelText(`ミルク残量 ${pct}%`, h > 0 ? `あと${h}時間${m}分` : `あと${m}分`, elapsedColor(1 - f), false);
+            }
+            if (lamp) lamp.className = 'fuel-lamp' + (f <= 0 ? ' empty' : (f <= 0.25 ? ' low' : ''));
+        }
+
+        if (fuelGauge.busy) return; // 演出中は、針を動かさずに目標値だけ覚えておく
+
+        if (!fuelGauge.started) {
+            // 起動時の演出：針が空っぽ(E)から今の残量までスッと上がってくる
+            fuelGauge.started = true;
+            fuelGauge.busy = true;
+            animateNeedle(0, f, 1300, fuelEaseOutBack).then(() => {
+                fuelGauge.busy = false;
+                setNeedle(fuelGauge.target);
+            });
+            return;
+        }
+        setNeedle(f);
+    }
+
+    // ミルクをあげた直後の演出：いったん空っぽ(E)まで落ちて、一気に満タン(F)へ。その後、実際の残量に落ち着く
+    async function playFuelRefill() {
+        ensureFuelGauge();
+        if (!fuelGauge.built) return;
+        const g = fuelGauge;
+        const id = ++g.refillId;
+        g.busy = true;
+        g.celebrating = true;
+        g.started = true;
+        const lamp = document.getElementById('fuel-lamp');
+        if (lamp) lamp.className = 'fuel-lamp';
+        setFuelText('給油中… ⛽', '', '', false);
+
+        try {
+            await animateNeedle(g.f, 0, 250, fuelEaseOutQuad);          // 空っぽへ
+            if (id !== g.refillId) return;
+            await animateNeedle(0, 1, 1000, fuelEaseOutBack);           // 一気に満タン（少し振り切れる）
+            if (id !== g.refillId) return;
+
+            setFuelText('🎉 満タン！', '', '#27ae60', false);
+            document.querySelectorAll('.fuel-sparkle').forEach((el, i) => {
+                el.classList.remove('pop');
+                void el.offsetWidth; // アニメーションを最初からやり直すための合図
+                el.style.animationDelay = (i * 0.12) + 's';
+                el.classList.add('pop');
+            });
+            await fuelSleep(1500);
+            if (id !== g.refillId) return;
+
+            g.celebrating = false;
+            updateFuelGauge(g.target, g.remainMs); // 文字を実際の残量に戻す
+            await animateNeedle(g.f, g.target, 900, fuelEaseInOut);     // 実際の残量へ落ち着く
+        } finally {
+            if (id === g.refillId) {
+                g.celebrating = false;
+                g.busy = false;
+                setNeedle(g.target);
+                updateFuelGauge(g.target, g.remainMs);
+            }
+        }
+    }
+
+    // 経過の進み具合(0=直後, 1=通知時間ちょうど)から、文字色を返す
+    // 色の段階を変えたいときは、この stops の数字(位置)と色を書き換えるだけでOK
+    function elapsedColor(progress) {
+        const stops = [
+            [0.00, [39, 174, 96]],    // 緑      ：あげた直後
+            [0.35, [140, 180, 40]],   // 黄緑
+            [0.55, [226, 176, 7]],    // 黄
+            [0.75, [243, 156, 18]],   // オレンジ
+            [1.00, [231, 76, 60]],    // 赤      ：通知時間ちょうど
+            [1.50, [170, 25, 25]]     // 濃い赤  ：通知時間をかなり過ぎた
+        ];
+        if (!isFinite(progress) || progress <= 0) return `rgb(${stops[0][1].join(',')})`;
+        const last = stops[stops.length - 1];
+        if (progress >= last[0]) return `rgb(${last[1].join(',')})`;
+        for (let i = 1; i < stops.length; i++) {
+            if (progress <= stops[i][0]) {
+                const [p0, c0] = stops[i - 1];
+                const [p1, c1] = stops[i];
+                const t = (progress - p0) / (p1 - p0);
+                const rgb = c0.map((v, k) => Math.round(v + (c1[k] - v) * t));
+                return `rgb(${rgb.join(',')})`;
+            }
         }
     }
 
@@ -674,6 +895,7 @@ async function submitRecord() {
         lastRecordAmount = record.amount;
         document.getElementById('last-amount').innerText = `${lastRecordAmount}ml`;
         updateElapsedTime();
+        playFuelRefill(); // ← 追加：空っぽから一気に満タンになる演出
         document.getElementById('record-memo').value = '';
         recordTimeManuallyChanged = false;
         recordAmountManuallyChanged = false; // ← 追加：次回入力のため、量もリセットして再計算対象に戻す
