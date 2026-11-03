@@ -486,17 +486,23 @@ document.addEventListener('visibilitychange', () => {
     }
 
     // 登録完了トースト：OKボタンを押さなくても2秒後に自動で閉じる
+    // ← 変更：閉じた「あと」に実行したい処理(onClosed)を渡せるようにした（満タン演出が重ならないように）
     let successToastTimer = null;
-    function showSuccessToast(message) {
+    let successToastOnClosed = null;
+    function showSuccessToast(message, onClosed) {
         const modal = document.getElementById('success-toast');
         const msgEl = document.getElementById('success-toast-message');
-        if (!modal || !msgEl) return;
+        if (!modal || !msgEl) { if (onClosed) onClosed(); return; }
         msgEl.innerText = message;
         modal.style.display = 'flex';
+        successToastOnClosed = onClosed || null;
 
         if (successToastTimer) clearTimeout(successToastTimer);
         successToastTimer = setTimeout(() => {
             modal.style.display = 'none';
+            const cb = successToastOnClosed;
+            successToastOnClosed = null;
+            if (cb) cb();
         }, 2000);
     }
 
@@ -658,7 +664,8 @@ document.addEventListener('visibilitychange', () => {
         fuelGauge.remainMs = remainMs;
 
         if (!fuelGauge.celebrating) {
-            const pct = Math.round(f * 100);
+            // 通知時間の前に「0%」と出ないよう、まだ空でない(f>0)間は最低1%と表示する
+            const pct = f > 0 ? Math.max(1, Math.round(f * 100)) : 0;
             if (f <= 0) {
                 setFuelText('ミルク残量 0%', 'ガス欠！ミルクの時間です', elapsedColor(2), true);
             } else {
@@ -682,6 +689,14 @@ document.addEventListener('visibilitychange', () => {
             return;
         }
         setNeedle(f);
+    }
+
+    // 登録直後〜演出開始までの間、針と文字を今のまま据え置く（モーダルの裏で先に満タンになってしまわないように）
+    function holdFuelGauge() {
+        ensureFuelGauge();
+        fuelGauge.started = true;
+        fuelGauge.busy = true;
+        fuelGauge.celebrating = true;
     }
 
     // ミルクをあげた直後の演出：いったん空っぽ(E)まで落ちて、一気に満タン(F)へ。その後、実際の残量に落ち着く
@@ -897,13 +912,13 @@ async function submitRecord() {
         lastRecordTime = record.timestamp;
         lastRecordAmount = record.amount;
         document.getElementById('last-amount').innerText = `${lastRecordAmount}ml`;
+        holdFuelGauge(); // ← 追加：モーダルが閉じるまで、メーターは今の状態のまま待たせる
         updateElapsedTime();
-        playFuelRefill(); // ← 追加：空っぽから一気に満タンになる演出
         document.getElementById('record-memo').value = '';
         recordTimeManuallyChanged = false;
         recordAmountManuallyChanged = false; // ← 追加：次回入力のため、量もリセットして再計算対象に戻す
         resetFormTime();
-        showSuccessToast('登録しました！');
+        showSuccessToast('登録しました！', playFuelRefill); // ← 変更：モーダルが閉じたあとに、空っぽから一気に満タンになる演出
 
         fetchInitialData();
     } catch (err) {
