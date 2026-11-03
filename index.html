@@ -557,7 +557,10 @@ document.addEventListener('visibilitychange', () => {
         elapsedEl.style.color = elapsedColor(diffMs / notifyMs);
 
         // ← 追加：ガソリンメーター風の残量表示。直後=満タン(1)、通知時間=空(0)。
-        updateFuelGauge(Math.max(0, 1 - diffMs / notifyMs), Math.max(0, notifyMs - diffMs));
+        //   「あと○時間○分」は、経過表示(分未満切り捨て)と足して通知時間ぴったりになるよう、
+        //   経過を分単位に切り捨てた値から引いて求める（秒まで含めて引くと、合計が1分足りなく見えるため）。
+        const elapsedWholeMs = Math.floor(diffMs / 60000) * 60000;
+        updateFuelGauge(Math.max(0, 1 - diffMs / notifyMs), Math.max(0, notifyMs - elapsedWholeMs));
     }
 
     // ==========================================================
