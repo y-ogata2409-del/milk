@@ -6502,14 +6502,5 @@
     "timestamp": "2026-11-04T04:06:00.000Z",
     "amount": 200,
     "memo": ""
-  },
-  {
-    "type": "milk",
-    "id": "mw1skwgv_cyr34d",
-    "date": "2026/11/04",
-    "time": "16:25",
-    "timestamp": "2026-11-04T07:25:00.000Z",
-    "amount": 200,
-    "memo": ""
   }
 ]
