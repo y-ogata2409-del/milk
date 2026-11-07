@@ -6637,5 +6637,14 @@
     "timestamp": "2026-11-07T10:50:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mw6obzda_nucaws",
+    "date": "2026/11/08",
+    "time": "02:25",
+    "timestamp": "2026-11-07T17:25:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
