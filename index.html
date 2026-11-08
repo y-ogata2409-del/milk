@@ -470,10 +470,15 @@
 <!-- ↑ 追加ここまで -->
 
 <!-- 登録完了トースト：OKボタンなし、2秒後に自動で閉じる -->
-<div class="modal" id="success-toast">
+<div class="modal" id="success-toast" onclick="closeSuccessToast()">
     <div class="modal-content" style="text-align:center;">
         <div style="font-size:2rem; margin-bottom:8px;">✅</div>
         <div id="success-toast-message" style="font-weight:bold; font-size:1.05rem;"></div>
+        <!-- 登録のごほうび：上の子たちの「同じ生後日数」の写真を1枚（だれかは見せない） -->
+        <div id="success-toast-photo" style="display:none; margin-top:14px;">
+            <img id="success-toast-img" alt="" style="width:100%; max-height:42vh; object-fit:contain; border-radius:12px; background:#eef3f7; display:block;">
+            <div style="font-size:0.8rem; color:#7f8c8d; margin-top:8px;">だれかな？ 写真タブでこたえあわせ 📷</div>
+        </div>
     </div>
 </div>
 
@@ -620,25 +625,38 @@ document.addEventListener('visibilitychange', () => {
         if (select) select.value = String(defaultAmount);
     }
 
-    // 登録完了トースト：OKボタンを押さなくても2秒後に自動で閉じる
+    // 登録完了トースト：自動で閉じる（写真つきのときは少し長め）。タップすれば早く閉じられる
     // ← 変更：閉じた「あと」に実行したい処理(onClosed)を渡せるようにした（満タン演出が重ならないように）
+    // ← 変更：用意できていれば、上の子たちの「同じ生後日数」の写真を1枚つけて表示する
     let successToastTimer = null;
     let successToastOnClosed = null;
+    function closeSuccessToast() {
+        const modal = document.getElementById('success-toast');
+        if (!modal || modal.style.display === 'none') return;
+        if (successToastTimer) { clearTimeout(successToastTimer); successToastTimer = null; }
+        modal.style.display = 'none';
+        const cb = successToastOnClosed;
+        successToastOnClosed = null;
+        if (cb) cb();
+    }
     function showSuccessToast(message, onClosed) {
         const modal = document.getElementById('success-toast');
         const msgEl = document.getElementById('success-toast-message');
         if (!modal || !msgEl) { if (onClosed) onClosed(); return; }
         msgEl.innerText = message;
+
+        // 写真(用意できていれば)。名前や日付は出さない
+        const photoBox = document.getElementById('success-toast-photo');
+        const photoImg = document.getElementById('success-toast-img');
+        const photoUrl = (typeof takeToastPhoto === 'function') ? takeToastPhoto() : null;
+        if (photoUrl) { photoImg.src = photoUrl; photoBox.style.display = 'block'; }
+        else { photoImg.removeAttribute('src'); photoBox.style.display = 'none'; }
+
         modal.style.display = 'flex';
         successToastOnClosed = onClosed || null;
 
         if (successToastTimer) clearTimeout(successToastTimer);
-        successToastTimer = setTimeout(() => {
-            modal.style.display = 'none';
-            const cb = successToastOnClosed;
-            successToastOnClosed = null;
-            if (cb) cb();
-        }, 2000);
+        successToastTimer = setTimeout(closeSuccessToast, photoUrl ? 4000 : 2000);
     }
 
     // 入力フォームの時刻を現在時刻（ローカル）にセット
@@ -2316,6 +2334,59 @@ async function photoUploadAll() {
     renderUploadSheet();
     renderPhotoPage();
 }
+
+// ==========================================================
+// 登録のごほうび写真：登録時のモーダルに出す1枚を、あらかじめ選んで読み込んでおく
+//   ・今日の生後日数に一番近い撮影日の写真から、ランダムに1枚（子どもも写真もランダム）
+//   ・名前は出さない。直前に出した写真は、ほかに選べるなら避ける
+//   ・間に合わなかったときは、写真なしでこれまでどおり表示する（登録を待たせない）
+// ==========================================================
+const toastPhoto = { ready: null, preparing: false, lastKey: '' };
+
+async function prepareToastPhoto() {
+    if (toastPhoto.preparing || !photoState.url || !photoState.key) return;
+    toastPhoto.preparing = true;
+    try {
+        try { await loadPhotoIndex(); } catch (e) { if (!photoState.index) throw e; }
+        const age = babyTodayAge();
+        // 子どもごとの候補（今日の生後日数にいちばん近い撮影日の写真）
+        const all = [];
+        SIBLINGS.forEach(c => {
+            const d = nearestPhotoDate(c, age);
+            if (!d) return;
+            const ids = photoState.index[c.id][d].map(id => ({ child: c.id, date: d, id, key: c.id + '/' + d + '/' + id }));
+            if (ids.length) all.push(ids);
+        });
+        // 直前に出した写真は避ける（ほかに選べる写真が1枚もないときだけ、同じ写真もあり）
+        let pool = all.map(ids => ids.filter(x => x.key !== toastPhoto.lastKey)).filter(ids => ids.length);
+        if (!pool.length) pool = all;
+        if (!pool.length) { toastPhoto.ready = null; return; }
+        const list = pool[Math.floor(Math.random() * pool.length)];
+        const pick = list[Math.floor(Math.random() * list.length)];
+        const url = await photoBlobUrl(pick.child, pick.date, pick.id);
+        toastPhoto.ready = { url, key: pick.key, ymd: localTodayYmd() };
+    } catch (e) {
+        toastPhoto.ready = null;
+    } finally {
+        toastPhoto.preparing = false;
+    }
+}
+
+// モーダルから呼ばれる：用意できた写真のURLを渡し、次の1枚の準備を始める
+function takeToastPhoto() {
+    const r = toastPhoto.ready;
+    toastPhoto.ready = null;
+    setTimeout(prepareToastPhoto, 500);
+    if (!r || r.ymd !== localTodayYmd()) return null; // 日付をまたいで古くなっていたら使わない
+    toastPhoto.lastKey = r.key;
+    return r.url;
+}
+
+window.addEventListener('load', () => { setTimeout(prepareToastPhoto, 1500); });
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (!toastPhoto.ready || toastPhoto.ready.ymd !== localTodayYmd()) { toastPhoto.ready = null; prepareToastPhoto(); }
+});
 </script>
 </body>
 </html>
