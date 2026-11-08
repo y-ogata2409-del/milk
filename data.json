@@ -6673,14 +6673,5 @@
     "timestamp": "2026-11-08T09:01:00.000Z",
     "amount": 200,
     "memo": ""
-  },
-  {
-    "type": "milk",
-    "id": "mw7s2nhz_6diuka",
-    "date": "2026/11/08",
-    "time": "20:57",
-    "timestamp": "2026-11-08T11:57:00.000Z",
-    "amount": 200,
-    "memo": ""
   }
 ]
