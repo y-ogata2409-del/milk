@@ -125,6 +125,9 @@
         .pc-grid.cols2 .pc-ctrl { flex-wrap: wrap; }
         .pc-grid.cols2 .pc-ctrl select { order: 3; flex: 1 1 100%; }
         .pc-grid.cols2 .pc-step { flex: 1; width: auto; }
+        .pc-align { display: flex; gap: 6px; margin-top: 8px; }
+        .pc-align button { flex: 1; padding: 7px 2px; border: 1px solid var(--border-color); background: #f7fafc; border-radius: 8px; font-size: 0.72rem; color: #5d6d7e; cursor: pointer; }
+        .pc-grid.cols2 .pc-align { flex-direction: column; }
         .pc-empty { text-align: center; color: #7f8c8d; font-size: 0.85rem; padding: 30px 8px; line-height: 1.7; }
         .pc-foot { text-align: center; margin: 14px 0 4px; font-size: 0.78rem; }
         .pc-foot a { color: #7f8c8d; text-decoration: underline; cursor: pointer; }
@@ -315,7 +318,7 @@
                 <div class="pc-ref">
                     <div class="pc-ref-age" id="pc-ref-age" onclick="photoJump()" style="cursor:pointer;"></div>
                     <div class="pc-ref-sub" id="pc-ref-sub"></div>
-                    <div class="pc-ref-sub" style="font-size:0.72rem; opacity:0.8;">上の「生後○日目」をタップすると、日にちを指定できます</div>
+                    <div class="pc-ref-sub" id="pc-ref-hint" style="font-size:0.72rem; opacity:0.8;"></div>
                 </div>
                 <div class="pc-btnrow">
                     <button class="pc-btn" onclick="photoShift(-7)">−7日</button>
@@ -1820,6 +1823,8 @@ const photoState = {
     indexJson: '',
     rendered: false,
     offset: 0,          // 基準の生後日数を、今日からずらした日数
+    mode: 'age',        // 'age'=同じ生後日数で比べる / 'date'=同じ年月日で比べる
+    refDate: '',        // mode='date' のときの基準の年月日(yyyy-mm-dd)
     picks: {},          // 子どもごとに「この日付を見る」と選んだ日付
     cols: lsGet('milkPhotoCols') === '2' ? 2 : 1,
     viewer: null,
@@ -1975,11 +1980,23 @@ function nearestPhotoDate(child, refAge) {
     return best;
 }
 
+// 基準の年月日(yyyy-mm-dd)に、いちばん近い撮影日（同じだけ離れていれば、前のほう）
+function nearestPhotoDateByCalendar(child, ymd) {
+    let best = null, bestDiff = Infinity;
+    const ref = pDays(ymd);
+    photoDates(child.id).forEach(d => {
+        const diff = Math.abs(pDays(d) - ref);
+        if (diff < bestDiff) { best = d; bestDiff = diff; }
+    });
+    return best;
+}
+
 function currentPhotoDate(child, refAge) {
     const dates = photoDates(child.id);
     if (!dates.length) return null;
     const picked = photoState.picks[child.id];
     if (picked && dates.indexOf(picked) !== -1) return picked;
+    if (photoState.mode === 'date' && photoState.refDate) return nearestPhotoDateByCalendar(child, photoState.refDate);
     return nearestPhotoDate(child, refAge);
 }
 
@@ -1995,9 +2012,17 @@ function renderPhotoPage() {
     const off = ref - todayAge;
     const label = off === 0 ? '今日' : off === -1 ? '昨日' : off === 1 ? '明日' : off < 0 ? (-off) + '日前' : off + '日後';
     const calYmd = pYmd(pDays(BIRTH_DATE) + ref - 1);
-    document.getElementById('pc-ref-age').innerText = ageLabel(ref);
-    document.getElementById('pc-ref-sub').innerText = (ref >= 1 ? label + '（' + pSlash(calYmd) + '）' : '（' + pSlash(calYmd) + '）') + 'にあたる日の写真';
-    document.getElementById('pc-today').disabled = (off === 0);
+    if (photoState.mode === 'date') {
+        document.getElementById('pc-ref-age').innerText = pSlash(photoState.refDate);
+        document.getElementById('pc-ref-sub').innerText = '同じ年月日の写真を並べています';
+        document.getElementById('pc-ref-hint').innerText = '上の日付をタップすると、年月日を指定できます';
+        document.getElementById('pc-today').disabled = false;
+    } else {
+        document.getElementById('pc-ref-age').innerText = ageLabel(ref);
+        document.getElementById('pc-ref-sub').innerText = (ref >= 1 ? label + '（' + pSlash(calYmd) + '）' : '（' + pSlash(calYmd) + '）') + 'にあたる日の写真';
+        document.getElementById('pc-ref-hint').innerText = '上の「生後○日目」をタップすると、日にちを指定できます';
+        document.getElementById('pc-today').disabled = (off === 0);
+    }
     document.getElementById('pc-cols').innerText = photoState.cols === 2 ? '1列で見る' : '2列で見る';
 
     const grid = document.getElementById('pc-grid');
@@ -2016,7 +2041,7 @@ function photoCardHtml(child, ref) {
     const date = currentPhotoDate(child, ref);
     const ids = photoState.index[child.id][date];
     const age = pAge(child.birth, date);
-    const diff = age - ref;
+    const diff = photoState.mode === 'date' ? pDays(date) - pDays(photoState.refDate) : age - ref;
     let badgeCls = '', badgeText;
     if (diff === 0) { badgeCls = ' exact'; badgeText = 'ぴったり同じ日'; }
     else {
@@ -2039,6 +2064,10 @@ function photoCardHtml(child, ref) {
             '<button class="pc-step" onclick="photoStep(\'' + child.id + '\',-1)"' + (idx === 0 ? ' disabled' : '') + ' aria-label="前の撮影日">◀</button>' +
             '<select onchange="photoPick(\'' + child.id + '\',this.value)" aria-label="撮影日を選ぶ">' + options + '</select>' +
             '<button class="pc-step" onclick="photoStep(\'' + child.id + '\',1)"' + (idx === dates.length - 1 ? ' disabled' : '') + ' aria-label="次の撮影日">▶</button>' +
+        '</div>' +
+        '<div class="pc-align">' +
+            '<button onclick="photoAlignDate(\'' + child.id + '\')">📅 同じ日付で見る</button>' +
+            '<button onclick="photoAlignAge(\'' + child.id + '\')">🎂 同じ生後日数で見る</button>' +
         '</div></div>';
 }
 
@@ -2050,14 +2079,62 @@ function photoScrolled(el, childId) {
 }
 
 function photoShift(delta, reset) {
-    const min = PHOTO_MIN_REF - babyTodayAge();
-    photoState.offset = reset ? 0 : Math.max(min, photoState.offset + delta);
+    if (reset) {
+        photoState.mode = 'age';
+        photoState.offset = 0;
+    } else if (photoState.mode === 'date') {
+        photoState.refDate = pYmd(pDays(photoState.refDate) + delta);
+    } else {
+        const min = PHOTO_MIN_REF - babyTodayAge();
+        photoState.offset = Math.max(min, photoState.offset + delta);
+    }
     photoState.picks = {};
     renderPhotoPage();
 }
 
+// この子の今の写真と「同じ年月日」に、ほかの子の写真も合わせる（なければ、いちばん近い日付）
+function photoAlignDate(childId) {
+    const child = childById(childId);
+    const date = currentPhotoDate(child, photoRefAge());
+    if (!date) return;
+    photoState.mode = 'date';
+    photoState.refDate = date;
+    photoState.picks = {};
+    renderPhotoPage();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// この子の今の写真と「同じ生後日数」に、ほかの子の写真も合わせる
+function photoAlignAge(childId) {
+    const child = childById(childId);
+    const date = currentPhotoDate(child, photoRefAge());
+    if (!date) return;
+    const age = Math.max(PHOTO_MIN_REF, pAge(child.birth, date));
+    photoState.mode = 'age';
+    photoState.offset = age - babyTodayAge();
+    photoState.picks = {};
+    renderPhotoPage();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 // 基準の日を、数字で指定する（例：「100」＝生後100日目、「前30」＝生まれる30日前）
 function photoJump() {
+    if (photoState.mode === 'date') {
+        const input = prompt('何年何月何日の写真を見ますか？\n例：2018/04/10', pSlash(photoState.refDate));
+        if (input === null) return;
+        const t = input.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/\s/g, '');
+        const m = t.match(/^(\d{4})[\/\-.年](\d{1,2})[\/\-.月](\d{1,2})日?$/);
+        let ymd = null;
+        if (m) {
+            ymd = m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0');
+            if (pYmd(pDays(ymd)) !== ymd) ymd = null; // 2月30日のような存在しない日付ははじく
+        }
+        if (!ymd) { alert('「2018/04/10」のように入れてください'); return; }
+        photoState.refDate = ymd;
+        photoState.picks = {};
+        renderPhotoPage();
+        return;
+    }
     const input = prompt('何日目の写真を見ますか？\n・生後の日数 … 例：100\n・生まれる前 … 例：前30（＝生まれる30日前）', '');
     if (input === null) return;
     const t = input.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/\s/g, '');
