@@ -6691,5 +6691,14 @@
     "timestamp": "2026-11-08T20:22:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mw8k7hzm_3w6tzd",
+    "date": "2026/11/09",
+    "time": "10:05",
+    "timestamp": "2026-11-09T01:05:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
