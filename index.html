@@ -333,6 +333,13 @@
                 </div>
             </div>
             <div id="pc-grid" class="pc-grid"></div>
+            <!-- 一時的なマイグレーション用（終わったらこのブロックごと消してもOKです） -->
+            <div class="card" style="margin-top: 15px; border: 1px dashed #f39c12; background: #fffdf9;">
+                <h2 style="font-size: 1rem; color: #d35400;">過去の写真の目印付け（一括処理）</h2>
+                <div class="pc-note" style="margin-bottom: 8px;">過去にアップロードした写真に12桁の目印を一括で付与し、これからの重複チェックに対応させます（2000枚でも自動で最後まで処理されます）。</div>
+                <button class="pc-btn primary" id="migrate-btn" onclick="runMigration()" style="width:100%; padding:12px;">一括で目印をつけるを開始</button>
+                <div id="migrate-status" style="font-size: 0.8rem; color: #5d6d7e; margin-top: 8px; text-align: center; min-height: 1.2em;"></div>
+            </div>
             <div class="pc-foot"><a onclick="showPhotoSetup('')">写真サーバーの設定</a></div>
         </div>
     </div>
@@ -2484,6 +2491,51 @@ function takeToastPhoto() {
     return r.url;
 }
 
+// 2000枚の過去写真を自動で少しずつループ処理して目印をつける
+async function runMigration() {
+    const statusEl = document.getElementById('migrate-status');
+    const btn = document.getElementById('migrate-btn');
+    if (!confirm('R2にある過去の写真すべてに目印の付与を開始しますか？\n（完了するまで画面を開いたままお待ちください）')) return;
+
+    btn.disabled = true;
+    let totalProcessed = 0;
+
+    try {
+        while (true) {
+            statusEl.innerText = `処理中... (これまでの累計: ${totalProcessed}枚完了)`;
+            
+            const res = await fetch(photoState.url.replace(/\/$/, '') + '/migrate', {
+                method: 'POST',
+                headers: { 'X-Photo-Key': photoState.key }
+            });
+            const json = await res.json();
+            
+            if (!json.ok && json.error) throw new Error(json.error);
+
+            totalProcessed += json.processed;
+            statusEl.innerText = `処理中... 残り ${json.remaining}枚 (累計 ${totalProcessed}枚完了)`;
+
+            // 残り0枚になった、または今回新しく処理された枚数が0枚になったら終了
+            if (json.done || json.processed === 0) {
+                statusEl.innerText = `✨ すべてのマイグレーションが完了しました！（合計 ${totalProcessed}枚）`;
+                alert('すべての過去写真への目印付与が完了しました！');
+                // 一覧を最新に更新
+                await loadPhotoIndex();
+                renderPhotoPage();
+                break;
+            }
+
+            // サーバーに負荷をかけないよう、わずかにウェイトを挟む
+            await new Promise(r => setTimeout(r, 300));
+        }
+    } catch (err) {
+        statusEl.innerText = `エラー: ${err.message}`;
+        alert('エラーが発生しました: ' + err.message);
+    } finally {
+        btn.disabled = false;
+    }
+}
+    
 window.addEventListener('load', () => { setTimeout(prepareToastPhoto, 1500); });
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
