@@ -6763,14 +6763,5 @@
     "timestamp": "2026-11-10T11:49:00.000Z",
     "amount": 200,
     "memo": ""
-  },
-  {
-    "type": "milk",
-    "id": "mwb8wfol_hadryu",
-    "date": "2026/11/11",
-    "time": "07:12",
-    "timestamp": "2026-11-10T22:12:00.000Z",
-    "amount": 200,
-    "memo": ""
   }
 ]
