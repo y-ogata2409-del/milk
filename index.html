@@ -160,6 +160,9 @@
         .pu-info.bad { color: #c0392b; font-weight: bold; }
         .pu-x { background: none; border: none; font-size: 1.1rem; color: #95a5a6; padding: 6px; cursor: pointer; }
         .pu-state { font-size: 1.1rem; flex: none; }
+        .pu-row.skip .pu-thumb { opacity: 0.4; }
+        .pu-dupthumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; margin-top: 4px; background: #eef3f7; display: block; }
+        .pu-force { margin-top: 6px; padding: 6px 10px; border: 1px solid var(--border-color); background: #f0f4f8; border-radius: 8px; font-size: 0.78rem; cursor: pointer; color: #2c3e50; }
         #pu-status { margin: 12px 0 0; font-size: 0.85rem; color: #5d6d7e; min-height: 1.2em; }
     </style>
     <!-- ファビコン -->
@@ -333,12 +336,22 @@
                 </div>
             </div>
             <div id="pc-grid" class="pc-grid"></div>
-            <!-- 一時的なマイグレーション用（終わったらこのブロックごと消してもOKです） -->
-            <div class="card" style="margin-top: 15px; border: 1px dashed #f39c12; background: #fffdf9;">
-                <h2 style="font-size: 1rem; color: #d35400;">過去の写真の目印付け（一括処理）</h2>
-                <div class="pc-note" style="margin-bottom: 8px;">過去にアップロードした写真に12桁の目印を一括で付与し、これからの重複チェックに対応させます（2000枚でも自動で最後まで処理されます）。</div>
-                <button class="pc-btn primary" id="migrate-btn" onclick="runMigration()" style="width:100%; padding:12px;">一括で目印をつけるを開始</button>
-                <div id="migrate-status" style="font-size: 0.8rem; color: #5d6d7e; margin-top: 8px; text-align: center; min-height: 1.2em;"></div>
+            <!-- 一時的なマイグレーション用カード（目印付けが終わったら、このブロックごと削除する） -->
+            <div class="card" style="margin-top:15px; border:1px dashed #f39c12; background:#fffdf9;">
+                <h2 style="font-size:1rem; color:#d35400;">過去の写真の目印付け（管理用・一時）</h2>
+                <div class="pc-note">R2にある過去の写真の名前を「撮影時刻-目印」に付け替えて、重複チェックの対象にします。写真の中身は変えません。①→②→③の順に進めてください。終わったら、このカードと Worker の /migrate は削除してください。</div>
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                    <select id="mig-child" style="flex:1;">
+                        <option value="hatsume" selected>はつめ</option>
+                        <option value="fumino">ふみの</option>
+                        <option value="iori">いおり</option>
+                    </select>
+                    <input type="date" id="mig-date" value="2015-12-13" style="flex:1; padding:8px; border:1px solid var(--border-color); border-radius:8px;">
+                </div>
+                <button class="pc-btn" id="mig-dry-btn" style="width:100%; margin-bottom:6px;" onclick="runMigration({dry:true})">① 件数を確認（変更なし）</button>
+                <button class="pc-btn" id="mig-pilot-btn" style="width:100%; margin-bottom:6px;" onclick="runMigration({pilot:true})">② パイロット（上の子・日付のフォルダだけ）</button>
+                <button class="pc-btn primary" id="mig-all-btn" style="width:100%;" onclick="runMigration({})">③ 全件を実行</button>
+                <div id="migrate-status" style="font-size:0.8rem; color:#5d6d7e; margin-top:8px; text-align:center; min-height:1.2em;"></div>
             </div>
             <div class="pc-foot"><a onclick="showPhotoSetup('')">写真サーバーの設定</a></div>
         </div>
@@ -515,7 +528,7 @@
         <div class="pu-children" id="pu-children"></div>
         <button class="pc-btn" style="width:100%; padding:14px;" onclick="document.getElementById('pu-file').click()">📷 写真を選ぶ（複数OK）</button>
         <input type="file" id="pu-file" accept="image/*" multiple style="display:none;" onchange="photoFilesChosen(this)">
-        <div class="pc-note" style="margin-top:8px;">撮影日が写真に入っていれば自動で読み取ります。日付は下で直せます。写真は縮小してから保存されます。</div>
+        <div class="pc-note" style="margin-top:8px;">撮影日が写真に入っていれば自動で読み取ります。日付は下で直せます。写真は縮小してから保存されます。同じファイルを二重に入れないよう、すでに入っている写真と同じものは追加しない形にします（それでも追加もできます）。なお、重複チェックの対象は、この機能を入れたあとに追加した写真だけです。</div>
         <div id="pu-list"></div>
         <div id="pu-status"></div>
         <button class="pc-btn primary" id="pu-go" style="width:100%; padding:14px; margin-top:10px;" onclick="photoUploadAll()" disabled>アップロード</button>
@@ -2314,7 +2327,129 @@ async function resizeToJpeg(file) {
     }
 }
 
+// ---------- 重複チェック（同じファイルを二重に入れないための目印）----------
+// 写真ファイルの中身から短い目印(12桁)を作り、保存名に入れておく：保存名 = 撮影時刻-目印
+// 同じ子・同じ日付に、同じ目印の写真がすでにあれば、追加前にお知らせする。
+// ※この機能を入れたあとに追加した写真だけが対象（それ以前の写真には目印がない）
+let dupQueue = Promise.resolve();
+
+async function fileFingerprint(file) {
+    try {
+        if (!(window.crypto && crypto.subtle)) return '';
+        const d = new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer()));
+        return Array.from(d.slice(0, 6)).map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+        return ''; // 作れなかったときは、重複チェックなしで進める
+    }
+}
+
+// Blob（保存されるバイト列＝縮小後JPEG）から目印(12桁hex)を作る。
+// 過去写真の目印はR2に残っている「縮小後のバイト列」からしか計算できないため、
+// 照合はこちらを主目印にする（従来の元ファイル目印 fileFingerprint も併用する）。
+async function blobFingerprint(blob) {
+    try {
+        if (!(window.crypto && crypto.subtle) || !blob) return '';
+        const d = new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()));
+        return Array.from(d.slice(0, 6)).map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+        return ''; // 作れなかったときは、この目印なしで進める
+    }
+}
+
+// 写真1枚の縮小済みBlobを1回だけ作って保持する。
+// 重複チェックとアップロードで同じBlobを使い回すことで、
+// 「保存名に入れた目印」と「実際に送信するバイト列」が必ず一致する。
+function getResizedBlob(it) {
+    if (!it.blobPromise) {
+        it.blobPromise = resizeToJpeg(it.file).catch(e => { it.blobPromise = null; throw e; });
+    }
+    return it.blobPromise;
+}
+
+// 保存名「撮影時刻-目印」から、目印の部分を取り出す
+function idFingerprint(id) {
+    const i = id.indexOf('-');
+    return i === -1 ? '' : id.slice(i + 1);
+}
+
+function isSkippedDup(it) { return !!it.dup && !it.forceAdd; }
+
+function queueDupCheck(it) {
+    it.checking = !!(childById(photoState.uploadChild) && it.date);
+    refreshUploadItem(it);
+    dupQueue = dupQueue.then(() => checkDuplicate(it)).catch(() => {});
+}
+
+async function checkDuplicate(it) {
+    const items = photoState.uploadItems;
+    if (items.indexOf(it) === -1) return;
+    const child = childById(photoState.uploadChild);
+    const token = it.dupToken = (it.dupToken || 0) + 1;
+    const prevForce = it.forceAdd;
+    it.dup = null;
+    if (!child || !it.date || uploadItemProblem(it, child) || it.state === 'done') {
+        it.checking = false; it.forceAdd = false; refreshUploadItem(it); return;
+    }
+    it.checking = true;
+    try {
+        if (it.fp === undefined) it.fp = await fileFingerprint(it.file); // 従来の目印（元ファイル）
+        if (token !== it.dupToken) return;
+        if (it.fpBlob === undefined) { // 新しい主目印（縮小後Blob＝保存されるバイト列）
+            try { it.fpBlob = await blobFingerprint(await getResizedBlob(it)); }
+            catch (e) { it.fpBlob = ''; } // 縮小に失敗したときは主目印なし（アップロード時にも失敗するので、その時点でエラー表示になる）
+            if (token !== it.dupToken) return;
+        }
+        const fps = [it.fp, it.fpBlob].filter(Boolean); // どちらの目印で一致しても重複と判定する
+        if (fps.length) {
+            const ids = ((photoState.index || {})[child.id] || {})[it.date] || [];
+            const hit = ids.find(id => fps.includes(idFingerprint(id)));
+            if (hit) it.dup = { kind: 'existing', childId: child.id, date: it.date, id: hit };
+            if (!it.dup) {
+                for (const other of items) { // 今回まとめて選んだ、先の写真とも比べる
+                    if (other === it) break;
+                    if (other.date !== it.date || isSkippedDup(other)) continue;
+                    const sameOrig = !!(other.fp && it.fp && other.fp === it.fp);
+                    const sameBlob = !!(other.fpBlob && it.fpBlob && other.fpBlob === it.fpBlob);
+                    if (sameOrig || sameBlob) { it.dup = { kind: 'batch' }; break; }
+                }
+            }
+        }
+    } finally {
+        if (token === it.dupToken) {
+            it.checking = false;
+            it.forceAdd = it.dup ? prevForce : false;
+            refreshUploadItem(it);
+        }
+    }
+}
+
+function puForce(i) {
+    const it = photoState.uploadItems[i];
+    if (!it) return;
+    it.forceAdd = !it.forceAdd;
+    refreshUploadItem(it);
+}
+
+function hydrateDupThumbs() {
+    document.querySelectorAll('#pu-list img.pu-dupthumb:not([src])').forEach(async img => {
+        try { img.src = await photoBlobUrl(img.dataset.child, img.dataset.date, img.dataset.id); } catch (e) {}
+    });
+}
+
+// その1枚ぶんの表示だけを更新する（日付の入力欄は作り直さない）
+function refreshUploadItem(it) {
+    const i = photoState.uploadItems.indexOf(it);
+    if (i === -1) return;
+    const el = document.getElementById('pu-infos-' + i);
+    if (el) el.innerHTML = uploadInfoHtml(it, childById(photoState.uploadChild));
+    const row = document.getElementById('pu-row-' + i);
+    if (row) row.classList.toggle('skip', isSkippedDup(it));
+    hydrateDupThumbs();
+    renderUploadSheet(true);
+}
+
 function openPhotoUpload() {
+    loadPhotoIndex().catch(() => {}); // 別の端末で入れた写真も重複判定に入るよう、最新の一覧にしておく
     document.getElementById('photo-upload').classList.add('open');
     document.getElementById('pu-status').innerText = '';
     renderUploadSheet();
@@ -2329,7 +2464,11 @@ function closePhotoUpload() {
     }
 }
 
-function puChild(id) { photoState.uploadChild = id; renderUploadSheet(); }
+function puChild(id) {
+    photoState.uploadChild = id;
+    renderUploadSheet();
+    photoState.uploadItems.forEach(it => { it.forceAdd = false; queueDupCheck(it); });
+}
 
 async function photoFilesChosen(input) {
     const files = Array.from(input.files || []).filter(f => !f.type || f.type.indexOf('image/') === 0);
@@ -2340,6 +2479,7 @@ async function photoFilesChosen(input) {
         const ex = await readExifDate(f);
         if (ex) { item.date = ex.date; item.time = ex.time; } else { item.exifMissing = true; }
         renderUploadSheet();
+        queueDupCheck(item);
     }
 }
 
@@ -2351,6 +2491,7 @@ function puDate(i, value) {
     const el = document.getElementById('pu-infos-' + i);
     if (el) el.innerHTML = uploadInfoHtml(it, childById(photoState.uploadChild));
     renderUploadSheet(true);
+    queueDupCheck(it);
 }
 
 function puRemove(i) {
@@ -2359,6 +2500,7 @@ function puRemove(i) {
     URL.revokeObjectURL(it.preview);
     photoState.uploadItems.splice(i, 1);
     renderUploadSheet();
+    photoState.uploadItems.forEach(queueDupCheck); // 「今回の別の写真と同じ」の判定をやり直す
 }
 
 // 写真1枚ぶんの下の注意書き（日付の問題・生後日数・失敗理由）
@@ -2370,6 +2512,17 @@ function uploadInfoHtml(it, child) {
     else info = '<div class="pu-info">先に「だれの写真？」を選んでください</div>';
     if (it.exifMissing && !it.date) info += '<div class="pu-info">撮影日が読み取れませんでした</div>';
     if (it.state === 'error') info += '<div class="pu-info bad">失敗：' + esc(it.err) + '</div>';
+    if (it.checking) info += '<div class="pu-info">重複チェック中…</div>';
+    if (it.dup) {
+        const i = photoState.uploadItems.indexOf(it);
+        info += '<div class="pu-info bad">⚠ ' + (it.dup.kind === 'existing' ? 'すでに入っている写真と同じファイルです' : '今回選んだ別の写真と同じファイルです') + '</div>';
+        if (it.dup.kind === 'existing') {
+            info += '<img class="pu-dupthumb" alt="すでに入っている写真" data-child="' + it.dup.childId + '" data-date="' + it.dup.date + '" data-id="' + esc(it.dup.id) + '">';
+        }
+        info += it.forceAdd
+            ? '<div class="pu-info">この写真も追加します</div><button class="pu-force" onclick="puForce(' + i + ')">やっぱり追加しない</button>'
+            : '<div class="pu-info">追加しません（スキップ）</div><button class="pu-force" onclick="puForce(' + i + ')">それでも追加する</button>';
+    }
     return info;
 }
 
@@ -2390,16 +2543,23 @@ function renderUploadSheet(keepFocus) {
     if (!keepFocus) {
         document.getElementById('pu-list').innerHTML = items.map((it, i) => {
             const stateIcon = it.state === 'done' ? '✅' : it.state === 'up' ? '⏳' : it.state === 'error' ? '⚠️' : '';
-            return '<div class="pu-row"><img class="pu-thumb" src="' + it.preview + '" alt="">' +
+            return '<div class="pu-row' + (isSkippedDup(it) ? ' skip' : '') + '" id="pu-row-' + i + '"><img class="pu-thumb" src="' + it.preview + '" alt="">' +
                 '<div class="pu-mid"><input type="date" value="' + it.date + '" onchange="puDate(' + i + ',this.value)"' + (photoState.uploading ? ' disabled' : '') + '><div id="pu-infos-' + i + '">' + uploadInfoHtml(it, child) + '</div></div>' +
                 (stateIcon ? '<div class="pu-state">' + stateIcon + '</div>' : '') +
                 '<button class="pu-x" onclick="puRemove(' + i + ')"' + (photoState.uploading ? ' disabled' : '') + ' aria-label="外す">✕</button></div>';
         }).join('');
+        hydrateDupThumbs();
     }
-    const ready = !!child && items.length > 0 && !photoState.uploading && items.every(it => !uploadItemProblem(it, child));
+    // 重複と判定されて追加しない写真は、数に入れない。重複チェック中は、終わるまで押せない
+    const active = items.filter(it => !isSkippedDup(it));
+    const skipped = items.length - active.length;
+    const checking = items.some(it => it.checking);
+    const ready = !!child && active.length > 0 && !photoState.uploading && !checking && active.every(it => !uploadItemProblem(it, child));
     const go = document.getElementById('pu-go');
     go.disabled = !ready;
-    go.innerText = items.length > 0 ? 'この' + items.length + '枚をアップロード' : 'アップロード';
+    go.innerText = checking ? '重複チェック中…'
+        : active.length > 0 ? 'この' + active.length + '枚をアップロード' + (skipped ? '（重複' + skipped + '枚は除く）' : '')
+        : 'アップロード';
 }
 
 async function photoUploadAll() {
@@ -2408,7 +2568,8 @@ async function photoUploadAll() {
     const statusEl = document.getElementById('pu-status');
     photoState.uploading = true;
     renderUploadSheet();
-    const targets = photoState.uploadItems.filter(it => it.state !== 'done');
+    const targets = photoState.uploadItems.filter(it => it.state !== 'done' && !isSkippedDup(it));
+    const skippedCount = photoState.uploadItems.filter(it => it.state !== 'done' && isSkippedDup(it)).length;
     let ok = 0, ng = 0, lastDate = '';
     for (let n = 0; n < targets.length; n++) {
         const it = targets[n];
@@ -2417,8 +2578,14 @@ async function photoUploadAll() {
         statusEl.innerText = 'アップロード中… ' + (n + 1) + '/' + targets.length;
         renderUploadSheet();
         try {
-            const blob = await resizeToJpeg(it.file);
-            const id = (it.time || '000000') + '-' + Math.random().toString(36).slice(2, 6);
+            const blob = await getResizedBlob(it); // 重複チェック時に作った縮小済みBlobを再利用する
+            if (it.fpBlob === undefined) it.fpBlob = await blobFingerprint(blob); // チェックを経ていない場合の保険
+            // 保存名 = 撮影時刻-目印。目印は「保存するバイト列（縮小後Blob）」のものを優先し、
+            // 作れなかったときだけ従来の「元ファイル」の目印を使う。
+            // 「それでも追加する」で同じ目印を入れ直すときだけ、上書きにならないよう末尾に文字を足す
+            const rand = Math.random().toString(36).slice(2, 6);
+            const mainFp = it.fpBlob || it.fp || '';
+            const id = (it.time || '000000') + '-' + (mainFp ? mainFp + (it.dup ? '-' + rand : '') : rand);
             await photoApi('/upload?child=' + encodeURIComponent(child.id) + '&date=' + it.date + '&id=' + encodeURIComponent(id), {
                 method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob
             });
@@ -2435,13 +2602,70 @@ async function photoUploadAll() {
     photoState.uploading = false;
     try { await loadPhotoIndex(); } catch (e) {}
     photoState.uploadItems = photoState.uploadItems.filter(it => {
-        if (it.state === 'done') { URL.revokeObjectURL(it.preview); return false; }
+        if (it.state === 'done' || isSkippedDup(it)) { URL.revokeObjectURL(it.preview); return false; }
         return true;
     });
     if (lastDate) photoState.picks[child.id] = lastDate;
-    statusEl.innerText = ok + '枚を追加しました' + (ng ? '（' + ng + '枚は失敗。下に理由があります）' : '');
+    statusEl.innerText = ok + '枚を追加しました' + (skippedCount ? '（重複の' + skippedCount + '枚は追加していません）' : '') + (ng ? '（' + ng + '枚は失敗。下に理由があります）' : '');
     renderUploadSheet();
     renderPhotoPage();
+}
+
+// ==========================================================
+// 一時的なマイグレーション実行（過去写真への目印付け）
+//   ・最初に dry（件数のみ・変更なし）で対象を確認してから実行する
+//   ・終了判定はサーバーの done のみ。「0件進んだのに完了」とは言わない
+//   ・目印付けが終わったら、この関数群と写真タブのカードは削除する
+// ==========================================================
+async function migApi(params) {
+    const qs = new URLSearchParams(params).toString();
+    const res = await photoApi('/migrate' + (qs ? '?' + qs : ''), { method: 'POST' });
+    return res.json();
+}
+
+async function runMigration(opts = {}) {
+    const statusEl = document.getElementById('migrate-status');
+    const btns = ['mig-dry-btn', 'mig-pilot-btn', 'mig-all-btn'].map(id => document.getElementById(id));
+    const setBusy = b => btns.forEach(x => { if (x) x.disabled = b; });
+    const params = {};
+    if (opts.pilot) {
+        params.child = document.getElementById('mig-child').value;
+        params.date = document.getElementById('mig-date').value;
+        if (!params.child || !params.date) { alert('パイロットの対象（子どもと日付）を入れてください'); return; }
+    }
+    const scopeLabel = opts.pilot ? (params.child + ' / ' + params.date + ' のフォルダ') : '全フォルダ';
+    try {
+        setBusy(true);
+        statusEl.innerText = '件数を確認中…';
+        const dry = await migApi({ ...params, dry: '1' });
+        if (!dry.ok) throw new Error(dry.error || '件数の確認に失敗しました');
+        statusEl.innerText = '対象 ' + dry.targets + '枚／処理済み ' + dry.valid + '枚／対象外 ' + dry.invalid + '枚（全' + dry.scanned + '枚）';
+        if (opts.dry) return;
+        if (dry.targets === 0) { statusEl.innerText += ' → 付ける対象はありません（完了済み）'; return; }
+        if (!confirm(scopeLabel + 'の ' + dry.targets + '枚に目印を付けます。\n（写真の中身は変えず、名前だけを付け替えます）\n開始しますか？')) {
+            statusEl.innerText += ' → 中止しました'; return;
+        }
+        let renamed = 0, merged = 0, conflicts = 0, rounds = 0;
+        while (true) {
+            rounds++;
+            if (rounds > 600) throw new Error('回数が上限を超えたため停止しました（途中分は処理済みです。再実行で続きから進みます）');
+            const r = await migApi(params);
+            if (!r.ok) throw new Error(r.error || 'マイグレーションに失敗しました');
+            renamed += r.renamed; merged += r.merged; conflicts += r.conflicts;
+            statusEl.innerText = '処理中… 残り ' + r.remaining + '枚（付け替え ' + renamed + '／統合 ' + merged + '／別名 ' + conflicts + '）';
+            if (r.done) break;
+            if (r.renamed + r.merged + r.conflicts === 0) throw new Error('処理が進まなくなりました（残り ' + r.remaining + '枚）。Worker側の状態を確認してください');
+            await new Promise(res => setTimeout(res, 300));
+        }
+        statusEl.innerText = '✨ 完了しました（付け替え ' + renamed + '枚／統合 ' + merged + '枚／別名 ' + conflicts + '枚）';
+        alert('目印付けが完了しました');
+        try { await loadPhotoIndex(); renderPhotoPage(); } catch (e) {}
+    } catch (err) {
+        statusEl.innerText = 'エラー：' + err.message;
+        alert('エラーが発生しました：' + err.message);
+    } finally {
+        setBusy(false);
+    }
 }
 
 // ==========================================================
@@ -2491,51 +2715,6 @@ function takeToastPhoto() {
     return r.url;
 }
 
-// 2000枚の過去写真を自動で少しずつループ処理して目印をつける
-async function runMigration() {
-    const statusEl = document.getElementById('migrate-status');
-    const btn = document.getElementById('migrate-btn');
-    if (!confirm('R2にある過去の写真すべてに目印の付与を開始しますか？\n（完了するまで画面を開いたままお待ちください）')) return;
-
-    btn.disabled = true;
-    let totalProcessed = 0;
-
-    try {
-        while (true) {
-            statusEl.innerText = `処理中... (これまでの累計: ${totalProcessed}枚完了)`;
-            
-            const res = await fetch(photoState.url.replace(/\/$/, '') + '/migrate', {
-                method: 'POST',
-                headers: { 'X-Photo-Key': photoState.key }
-            });
-            const json = await res.json();
-            
-            if (!json.ok && json.error) throw new Error(json.error);
-
-            totalProcessed += json.processed;
-            statusEl.innerText = `処理中... 残り ${json.remaining}枚 (累計 ${totalProcessed}枚完了)`;
-
-            // 残り0枚になった、または今回新しく処理された枚数が0枚になったら終了
-            if (json.done || json.processed === 0) {
-                statusEl.innerText = `✨ すべてのマイグレーションが完了しました！（合計 ${totalProcessed}枚）`;
-                alert('すべての過去写真への目印付与が完了しました！');
-                // 一覧を最新に更新
-                await loadPhotoIndex();
-                renderPhotoPage();
-                break;
-            }
-
-            // サーバーに負荷をかけないよう、わずかにウェイトを挟む
-            await new Promise(r => setTimeout(r, 300));
-        }
-    } catch (err) {
-        statusEl.innerText = `エラー: ${err.message}`;
-        alert('エラーが発生しました: ' + err.message);
-    } finally {
-        btn.disabled = false;
-    }
-}
-    
 window.addEventListener('load', () => { setTimeout(prepareToastPhoto, 1500); });
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
