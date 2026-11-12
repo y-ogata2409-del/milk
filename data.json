@@ -6835,5 +6835,14 @@
     "timestamp": "2026-11-12T05:32:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mwd80wiy_nj34mq",
+    "date": "2026/11/12",
+    "time": "16:23",
+    "timestamp": "2026-11-12T07:23:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
