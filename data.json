@@ -6817,14 +6817,5 @@
     "timestamp": "2026-11-11T20:39:00.000Z",
     "amount": 200,
     "memo": ""
-  },
-  {
-    "type": "milk",
-    "id": "mwcs4xsn_cubv30",
-    "date": "2026/11/12",
-    "time": "08:58",
-    "timestamp": "2026-11-11T23:58:00.000Z",
-    "amount": 200,
-    "memo": ""
   }
 ]
