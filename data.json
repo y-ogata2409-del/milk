@@ -6826,5 +6826,14 @@
     "timestamp": "2026-11-12T00:53:00.000Z",
     "amount": 200,
     "memo": ""
+  },
+  {
+    "type": "milk",
+    "id": "mwd42iku_b60omd",
+    "date": "2026/11/12",
+    "time": "14:32",
+    "timestamp": "2026-11-12T05:32:00.000Z",
+    "amount": 200,
+    "memo": ""
   }
 ]
