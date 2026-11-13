@@ -163,6 +163,13 @@
         .pu-row.skip .pu-thumb { opacity: 0.4; }
         .pu-dupthumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; margin-top: 4px; background: #eef3f7; display: block; }
         .pu-force { margin-top: 6px; padding: 6px 10px; border: 1px solid var(--border-color); background: #f0f4f8; border-radius: 8px; font-size: 0.78rem; cursor: pointer; color: #2c3e50; }
+        /* 重複チェック・アップロードの進み具合（スクロールしても上に残る） */
+        .pu-progress { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: #f7f9fb; padding: 8px 0 10px; margin-top: 6px; }
+        .pu-progress-text { font-size: 0.85rem; font-weight: bold; color: #2c3e50; margin-bottom: 6px; }
+        .pu-progress-bar { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+        .pu-progress-fill { height: 100%; width: 0; background: var(--primary-color); border-radius: 4px; transition: width 0.2s; }
+        .pu-progress.done .pu-progress-fill { background: #27ae60; }
+        .pu-progress.wait .pu-progress-fill { background: #f39c12; }
         #pu-status { margin: 12px 0 0; font-size: 0.85rem; color: #5d6d7e; min-height: 1.2em; }
     </style>
     <!-- ファビコン -->
@@ -512,6 +519,10 @@
         <button class="pc-btn" style="width:100%; padding:14px;" onclick="document.getElementById('pu-file').click()">📷 写真を選ぶ（複数OK）</button>
         <input type="file" id="pu-file" accept="image/*" multiple style="display:none;" onchange="photoFilesChosen(this)">
         <div class="pc-note" style="margin-top:8px;">撮影日が写真に入っていれば自動で読み取ります。日付は下で直せます。写真は縮小してから保存されます。同じファイルを二重に入れないよう、すでに入っている写真と同じものは追加しない形にします（それでも追加もできます）。縮小や画質を変えたファイルなど、中身が違うものは、同じ写真とは判定できません。</div>
+        <div class="pu-progress" id="pu-progress" style="display:none;">
+            <div class="pu-progress-text" id="pu-progress-text"></div>
+            <div class="pu-progress-bar"><div class="pu-progress-fill" id="pu-progress-fill"></div></div>
+        </div>
         <div id="pu-list"></div>
         <div id="pu-status"></div>
         <button class="pc-btn primary" id="pu-go" style="width:100%; padding:14px; margin-top:10px;" onclick="photoUploadAll()" disabled>アップロード</button>
@@ -1833,7 +1844,10 @@ const photoState = {
     viewer: null,
     uploadChild: '',
     uploadItems: [],
-    uploading: false
+    uploading: false,
+    unread: 0,        // 選んだ写真のうち、まだ読み込み(撮影日の読み取り)が始まっていない枚数
+    upDone: 0,        // アップロードが終わった枚数
+    upTotal: 0        // アップロードする枚数
 };
 const photoBlobCache = new Map();
 
@@ -2353,6 +2367,7 @@ function idFingerprint(id) {
 function isSkippedDup(it) { return !!it.dup && !it.forceAdd; }
 
 function queueDupCheck(it) {
+    it.checked = false;
     it.checking = !!(childById(photoState.uploadChild) && it.date);
     refreshUploadItem(it);
     dupQueue = dupQueue.then(() => checkDuplicate(it)).catch(() => {});
@@ -2366,7 +2381,8 @@ async function checkDuplicate(it) {
     const prevForce = it.forceAdd;
     it.dup = null;
     if (!child || !it.date || uploadItemProblem(it, child) || it.state === 'done') {
-        it.checking = false; it.forceAdd = false; refreshUploadItem(it); return;
+        // 子どもが未選択・日付なしのときは「まだ」。日付に問題があるときは、チェックする対象外として「済み」にする
+        it.checking = false; it.forceAdd = false; it.checked = !!child && !!it.date; refreshUploadItem(it); return;
     }
     it.checking = true;
     try {
@@ -2395,6 +2411,7 @@ async function checkDuplicate(it) {
     } finally {
         if (token === it.dupToken) {
             it.checking = false;
+            it.checked = true;
             it.forceAdd = it.dup ? prevForce : false;
             refreshUploadItem(it);
         }
@@ -2451,11 +2468,15 @@ function puChild(id) {
 async function photoFilesChosen(input) {
     const files = Array.from(input.files || []).filter(f => !f.type || f.type.indexOf('image/') === 0);
     input.value = '';
+    photoState.unread += files.length; // 全体の枚数を先に数えておく（進み具合を「○/全体」で出すため）
+    renderUploadSheet(true);
     for (const f of files) {
-        const item = { file: f, preview: URL.createObjectURL(f), date: '', time: '000000', state: '', exifMissing: false, err: '' };
+        const item = { file: f, preview: URL.createObjectURL(f), date: '', time: '000000', state: '', exifMissing: false, exifDone: false, checked: false, err: '' };
         photoState.uploadItems.push(item);
+        photoState.unread--;
         const ex = await readExifDate(f);
         if (ex) { item.date = ex.date; item.time = ex.time; } else { item.exifMissing = true; }
+        item.exifDone = true;
         renderUploadSheet();
         queueDupCheck(item);
     }
@@ -2532,22 +2553,68 @@ function renderUploadSheet(keepFocus) {
     const active = items.filter(it => !isSkippedDup(it));
     const skipped = items.length - active.length;
     const checking = items.some(it => it.checking);
-    const ready = !!child && active.length > 0 && !photoState.uploading && !checking && active.every(it => !uploadItemProblem(it, child));
+    const loading = photoState.unread > 0 || items.some(it => !it.exifDone); // まだ読み込み中の写真がある
+    renderUploadProgress(items, child);
+    const ready = !!child && active.length > 0 && !photoState.uploading && !checking && !loading && active.every(it => !uploadItemProblem(it, child));
     const go = document.getElementById('pu-go');
     go.disabled = !ready;
-    go.innerText = checking ? '重複チェック中…'
+    go.innerText = loading ? '読み込み中…'
+        : checking ? '重複チェック中…'
         : active.length > 0 ? 'この' + active.length + '枚をアップロード' + (skipped ? '（重複' + skipped + '枚は除く）' : '')
         : 'アップロード';
+}
+
+// 進み具合のバー：重複チェック（○/全体）、アップロード（○/全体）を、同じ場所に出す
+function renderUploadProgress(items, child) {
+    const box = document.getElementById('pu-progress');
+    const textEl = document.getElementById('pu-progress-text');
+    const fillEl = document.getElementById('pu-progress-fill');
+    if (!box) return;
+    const total = items.length + photoState.unread;
+    let text = '', ratio = 0, cls = '';
+    if (photoState.uploading) {
+        text = 'アップロード中… ' + photoState.upDone + '/' + photoState.upTotal + '枚';
+        ratio = photoState.upTotal ? photoState.upDone / photoState.upTotal : 0;
+    } else if (total === 0) {
+        box.style.display = 'none';
+        return;
+    } else if (!child) {
+        text = '「だれの写真？」を選ぶと、重複チェックが始まります（' + total + '枚）';
+        cls = 'wait';
+    } else {
+        const waitingDate = items.filter(it => it.exifDone && !it.date).length; // 撮影日が読み取れず、日付待ちの写真
+        const target = total - waitingDate;
+        const done = items.filter(it => it.checked).length;
+        const dups = items.filter(it => it.dup).length;
+        const extra = waitingDate ? '／日付待ち ' + waitingDate + '枚' : '';
+        if (target <= 0) {
+            text = '日付が読み取れなかった写真が ' + waitingDate + '枚あります。日付を入れてください';
+            cls = 'wait';
+        } else if (done < target) {
+            text = '重複チェック中… ' + done + '/' + target + '枚' + extra;
+            ratio = done / target;
+        } else {
+            text = '重複チェック完了（' + target + '枚中、重複 ' + dups + '枚）' + extra;
+            ratio = 1;
+            cls = 'done';
+        }
+    }
+    box.className = 'pu-progress' + (cls ? ' ' + cls : '');
+    textEl.innerText = text;
+    fillEl.style.width = Math.round(ratio * 100) + '%';
+    box.style.display = 'block';
 }
 
 async function photoUploadAll() {
     const child = childById(photoState.uploadChild);
     if (!child || photoState.uploading) return;
     const statusEl = document.getElementById('pu-status');
-    photoState.uploading = true;
-    renderUploadSheet();
     const targets = photoState.uploadItems.filter(it => it.state !== 'done' && !isSkippedDup(it));
     const skippedCount = photoState.uploadItems.filter(it => it.state !== 'done' && isSkippedDup(it)).length;
+    photoState.upTotal = targets.length;
+    photoState.upDone = 0;
+    photoState.uploading = true;
+    renderUploadSheet();
     let ok = 0, ng = 0, lastDate = '';
     for (let n = 0; n < targets.length; n++) {
         const it = targets[n];
@@ -2572,6 +2639,9 @@ async function photoUploadAll() {
             it.err = e.message;
             ng++;
             if (e.code === 'auth') break;
+        } finally {
+            photoState.upDone = n + 1; // 成功でも失敗でも、1枚ぶん終わった
+            renderUploadSheet(true);
         }
     }
     photoState.uploading = false;
