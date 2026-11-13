@@ -161,6 +161,14 @@
         .pu-x { background: none; border: none; font-size: 1.1rem; color: #95a5a6; padding: 6px; cursor: pointer; }
         .pu-state { font-size: 1.1rem; flex: none; }
         .pu-row.skip .pu-thumb { opacity: 0.4; }
+        .pu-row.forced { border-left: 4px solid #f39c12; }
+        /* 重複している写真をまとめる、閉じたアコーディオン（赤い枠で、ひと目で区別できる） */
+        .pu-dupbox { margin-top: 10px; border: 2px solid #e74c3c; border-radius: 12px; background: #fdecea; overflow: hidden; }
+        .pu-dupbox > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; font-weight: bold; font-size: 0.9rem; color: #8a1f14; cursor: pointer; list-style: none; }
+        .pu-dupbox > summary::-webkit-details-marker { display: none; }
+        .pu-dupbox > summary::after { content: '▼ 開く'; font-size: 0.78rem; font-weight: normal; white-space: nowrap; }
+        .pu-dupbox[open] > summary::after { content: '▲ 閉じる'; }
+        .pu-dupbox .pu-row { margin: 0 8px 8px; border-color: #f5b7b1; }
         .pu-dupthumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; margin-top: 4px; background: #eef3f7; display: block; }
         .pu-force { margin-top: 6px; padding: 6px 10px; border: 1px solid var(--border-color); background: #f0f4f8; border-radius: 8px; font-size: 0.78rem; cursor: pointer; color: #2c3e50; }
         /* 重複チェック・アップロードの進み具合（スクロールしても上に残る） */
@@ -1845,6 +1853,7 @@ const photoState = {
     uploadChild: '',
     uploadItems: [],
     uploading: false,
+    dupOpen: false,   // 重複アコーディオンを開いているか(一覧を作り直しても開閉を保つため)
     unread: 0,        // 選んだ写真のうち、まだ読み込み(撮影日の読み取り)が始まっていない枚数
     upDone: 0,        // アップロードが終わった枚数
     upTotal: 0        // アップロードする枚数
@@ -2427,8 +2436,16 @@ function puForce(i) {
 
 function hydrateDupThumbs() {
     document.querySelectorAll('#pu-list img.pu-dupthumb:not([src])').forEach(async img => {
+        const box = img.closest('details');
+        if (box && !box.open) return; // 閉じているアコーディオンの中は、開いたときに読み込む
         try { img.src = await photoBlobUrl(img.dataset.child, img.dataset.date, img.dataset.id); } catch (e) {}
     });
+}
+
+// アコーディオンを開閉したとき
+function puDupToggle(el) {
+    photoState.dupOpen = el.open;
+    if (el.open) hydrateDupThumbs();
 }
 
 // その1枚ぶんの表示だけを更新する（日付の入力欄は作り直さない）
@@ -2438,7 +2455,11 @@ function refreshUploadItem(it) {
     const el = document.getElementById('pu-infos-' + i);
     if (el) el.innerHTML = uploadInfoHtml(it, childById(photoState.uploadChild));
     const row = document.getElementById('pu-row-' + i);
-    if (row) row.classList.toggle('skip', isSkippedDup(it));
+    if (row && row.dataset.group !== (isSkippedDup(it) ? 'dup' : 'main')) {
+        renderUploadSheet(); // 重複になった／重複でなくなった：アコーディオンの出し入れのため、一覧を作り直す
+        return;
+    }
+    if (row) row.classList.toggle('forced', !!(it.dup && it.forceAdd));
     hydrateDupThumbs();
     renderUploadSheet(true);
 }
@@ -2456,6 +2477,7 @@ function closePhotoUpload() {
     if (!photoState.uploading) {
         photoState.uploadItems.forEach(it => URL.revokeObjectURL(it.preview));
         photoState.uploadItems = [];
+        photoState.dupOpen = false;
     }
 }
 
@@ -2531,6 +2553,16 @@ function uploadItemProblem(it, child) {
     return '';
 }
 
+// 写真1枚ぶんの行。iは「選んだ写真の並びの中での番号」（通常の一覧に出ても、アコーディオンに入っても、同じ番号を使う）
+function uploadRowHtml(it, i, child) {
+    const stateIcon = it.state === 'done' ? '✅' : it.state === 'up' ? '⏳' : it.state === 'error' ? '⚠️' : '';
+    const group = isSkippedDup(it) ? 'dup' : 'main';
+    return '<div class="pu-row' + (group === 'dup' ? ' skip' : '') + (it.dup && it.forceAdd ? ' forced' : '') + '" id="pu-row-' + i + '" data-group="' + group + '"><img class="pu-thumb" src="' + it.preview + '" alt="">' +
+        '<div class="pu-mid"><input type="date" value="' + it.date + '" onchange="puDate(' + i + ',this.value)"' + (photoState.uploading ? ' disabled' : '') + '><div id="pu-infos-' + i + '">' + uploadInfoHtml(it, child) + '</div></div>' +
+        (stateIcon ? '<div class="pu-state">' + stateIcon + '</div>' : '') +
+        '<button class="pu-x" onclick="puRemove(' + i + ')"' + (photoState.uploading ? ' disabled' : '') + ' aria-label="外す">✕</button></div>';
+}
+
 // keepFocus=trueのときは、日付入力中に入力欄が作り直されないよう、リストはそのままにして下のボタンだけ更新する
 function renderUploadSheet(keepFocus) {
     const child = childById(photoState.uploadChild);
@@ -2540,13 +2572,16 @@ function renderUploadSheet(keepFocus) {
 
     const items = photoState.uploadItems;
     if (!keepFocus) {
-        document.getElementById('pu-list').innerHTML = items.map((it, i) => {
-            const stateIcon = it.state === 'done' ? '✅' : it.state === 'up' ? '⏳' : it.state === 'error' ? '⚠️' : '';
-            return '<div class="pu-row' + (isSkippedDup(it) ? ' skip' : '') + '" id="pu-row-' + i + '"><img class="pu-thumb" src="' + it.preview + '" alt="">' +
-                '<div class="pu-mid"><input type="date" value="' + it.date + '" onchange="puDate(' + i + ',this.value)"' + (photoState.uploading ? ' disabled' : '') + '><div id="pu-infos-' + i + '">' + uploadInfoHtml(it, child) + '</div></div>' +
-                (stateIcon ? '<div class="pu-state">' + stateIcon + '</div>' : '') +
-                '<button class="pu-x" onclick="puRemove(' + i + ')"' + (photoState.uploading ? ' disabled' : '') + ' aria-label="外す">✕</button></div>';
-        }).join('');
+        const mainRows = [], dupRows = [];
+        items.forEach((it, i) => (isSkippedDup(it) ? dupRows : mainRows).push(uploadRowHtml(it, i, child)));
+        let listHtml = '';
+        if (dupRows.length) {
+            listHtml += '<details class="pu-dupbox" id="pu-dupbox"' + (photoState.dupOpen ? ' open' : '') + ' ontoggle="puDupToggle(this)">' +
+                '<summary><span>⚠ 重複している写真 ' + dupRows.length + '枚（追加しません）</span></summary>' + dupRows.join('') + '</details>';
+        } else {
+            photoState.dupOpen = false;
+        }
+        document.getElementById('pu-list').innerHTML = listHtml + mainRows.join('');
         hydrateDupThumbs();
     }
     // 重複と判定されて追加しない写真は、数に入れない。重複チェック中は、終わるまで押せない
