@@ -162,6 +162,15 @@
         .pu-state { font-size: 1.1rem; flex: none; }
         .pu-row.skip .pu-thumb { opacity: 0.4; }
         .pu-row.forced { border-left: 4px solid #f39c12; }
+        .pu-check { width: 22px; height: 22px; flex: none; accent-color: var(--primary-color); }
+        .pu-row.unsel .pu-thumb, .pu-row.unsel .pu-mid { opacity: 0.45; }
+        .pu-childsel { width: 100%; margin-top: 6px; padding: 6px 8px; font-size: 0.85rem; background: #fff; border: 1px solid var(--border-color); border-left: 6px solid #cbd5e0; border-radius: 8px; }
+        .pu-bulk { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; margin-top: 8px; }
+        .pu-bulk-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .pu-bulk-top b { flex: 1; font-size: 0.88rem; }
+        .pu-bulk-child { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; font-size: 0.8rem; color: #5d6d7e; }
+        .pu-mini { padding: 6px 10px; border: 1px solid var(--border-color); background: #f0f4f8; border-radius: 8px; font-size: 0.8rem; cursor: pointer; color: #2c3e50; }
+        .pu-mini:disabled { opacity: 0.4; }
         /* 重複している写真をまとめる、閉じたアコーディオン（赤い枠で、ひと目で区別できる） */
         .pu-dupbox { margin-top: 10px; border: 2px solid #e74c3c; border-radius: 12px; background: #fdecea; overflow: hidden; }
         .pu-dupbox > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; font-weight: bold; font-size: 0.9rem; color: #8a1f14; cursor: pointer; list-style: none; }
@@ -522,15 +531,16 @@
 <div class="pu" id="photo-upload">
     <div class="pu-inner">
         <div class="pu-head"><b>写真を追加</b><button class="pc-btn" style="flex:none; padding:8px 14px;" onclick="closePhotoUpload()">閉じる</button></div>
-        <label>だれの写真？</label>
+        <label>だれの写真？（まとめて設定。写真ごとに変えることもできます）</label>
         <div class="pu-children" id="pu-children"></div>
         <button class="pc-btn" style="width:100%; padding:14px;" onclick="document.getElementById('pu-file').click()">📷 写真を選ぶ（複数OK）</button>
         <input type="file" id="pu-file" accept="image/*" multiple style="display:none;" onchange="photoFilesChosen(this)">
-        <div class="pc-note" style="margin-top:8px;">撮影日が写真に入っていれば自動で読み取ります。日付は下で直せます。写真は縮小してから保存されます。同じファイルを二重に入れないよう、すでに入っている写真と同じものは追加しない形にします（それでも追加もできます）。縮小や画質を変えたファイルなど、中身が違うものは、同じ写真とは判定できません。</div>
+        <div class="pc-note" style="margin-top:8px;">撮影日が写真に入っていれば自動で読み取ります。日付は下で直せます。写真は縮小してから保存されます。同じファイルを二重に入れないよう、すでに入っている写真と同じものは追加しない形にします（それでも追加もできます）。縮小や画質を変えたファイルなど、中身が違うものは、同じ写真とは判定できません。チェックを入れた写真だけ取り込みます。子どもを間違えたときは、写真ごとの「子」の欄で選び直せます。</div>
         <div class="pu-progress" id="pu-progress" style="display:none;">
             <div class="pu-progress-text" id="pu-progress-text"></div>
             <div class="pu-progress-bar"><div class="pu-progress-fill" id="pu-progress-fill"></div></div>
         </div>
+        <div class="pu-bulk" id="pu-bulk" style="display:none;"></div>
         <div id="pu-list"></div>
         <div id="pu-status"></div>
         <button class="pc-btn primary" id="pu-go" style="width:100%; padding:14px; margin-top:10px;" onclick="photoUploadAll()" disabled>アップロード</button>
@@ -2375,9 +2385,13 @@ function idFingerprint(id) {
 
 function isSkippedDup(it) { return !!it.dup && !it.forceAdd; }
 
+// その写真を保存する子ども：写真ごとに選んだ子があればそれ、なければ「だれの写真？」で選んだ子
+function itemChildId(it) { return it.child || photoState.uploadChild || ''; }
+function itemChild(it) { return childById(itemChildId(it)); }
+
 function queueDupCheck(it) {
     it.checked = false;
-    it.checking = !!(childById(photoState.uploadChild) && it.date);
+    it.checking = !!(itemChild(it) && it.date);
     refreshUploadItem(it);
     dupQueue = dupQueue.then(() => checkDuplicate(it)).catch(() => {});
 }
@@ -2385,7 +2399,7 @@ function queueDupCheck(it) {
 async function checkDuplicate(it) {
     const items = photoState.uploadItems;
     if (items.indexOf(it) === -1) return;
-    const child = childById(photoState.uploadChild);
+    const child = itemChild(it);
     const token = it.dupToken = (it.dupToken || 0) + 1;
     const prevForce = it.forceAdd;
     it.dup = null;
@@ -2410,7 +2424,7 @@ async function checkDuplicate(it) {
             if (!it.dup) {
                 for (const other of items) {
                     if (other === it) break;
-                    if (other.date !== it.date || isSkippedDup(other)) continue;
+                    if (other.date !== it.date || itemChildId(other) !== itemChildId(it) || isSkippedDup(other)) continue;
                     const sameOrig = !!(other.fp && it.fp && other.fp === it.fp);
                     const sameBlob = !!(other.fpBlob && it.fpBlob && other.fpBlob === it.fpBlob);
                     if (sameOrig || sameBlob) { it.dup = { kind: 'batch' }; break; }
@@ -2453,7 +2467,7 @@ function refreshUploadItem(it) {
     const i = photoState.uploadItems.indexOf(it);
     if (i === -1) return;
     const el = document.getElementById('pu-infos-' + i);
-    if (el) el.innerHTML = uploadInfoHtml(it, childById(photoState.uploadChild));
+    if (el) el.innerHTML = uploadInfoHtml(it, itemChild(it));
     const row = document.getElementById('pu-row-' + i);
     if (row && row.dataset.group !== (isSkippedDup(it) ? 'dup' : 'main')) {
         renderUploadSheet(); // 重複になった／重複でなくなった：アコーディオンの出し入れのため、一覧を作り直す
@@ -2484,7 +2498,63 @@ function closePhotoUpload() {
 function puChild(id) {
     photoState.uploadChild = id;
     renderUploadSheet();
-    photoState.uploadItems.forEach(it => { it.forceAdd = false; queueDupCheck(it); });
+    // 写真ごとに子を選んだものは、そのまま。選んでいないものだけ、新しい子で判定し直す
+    photoState.uploadItems.forEach(it => { if (!it.child) { it.forceAdd = false; queueDupCheck(it); } });
+}
+
+// 写真ごとの「子」を選び直す（違う子の写真を選んでしまったとき用）
+function puItemChild(i, childId) {
+    const it = photoState.uploadItems[i];
+    if (!it) return;
+    it.child = childId; // 空のときは、「だれの写真？」の選択に従う
+    it.forceAdd = false;
+    const row = document.getElementById('pu-row-' + i);
+    const sel = row && row.querySelector('.pu-childsel');
+    const c = itemChild(it);
+    if (sel) sel.style.borderLeftColor = c ? c.color : '#cbd5e0';
+    // 同じ日付の写真は、「今回の別の写真と同じ」の判定も変わりうるので、まとめて判定し直す
+    photoState.uploadItems.forEach(o => { if (o === it || (it.date && o.date === it.date)) queueDupCheck(o); });
+}
+
+// 取り込む／取り込まない のチェック
+function puSel(i, checked) {
+    const it = photoState.uploadItems[i];
+    if (!it) return;
+    it.selected = !!checked;
+    const row = document.getElementById('pu-row-' + i);
+    if (row) row.classList.toggle('unsel', !it.selected);
+    renderUploadSheet(true);
+}
+
+function puSelectAll(flag) {
+    photoState.uploadItems.forEach(it => { if (!isSkippedDup(it)) it.selected = !!flag; });
+    renderUploadSheet();
+}
+
+// チェックを入れた写真の子を、まとめて変更する
+function puBulkChild(childId) {
+    const targets = photoState.uploadItems.filter(it => !isSkippedDup(it) && it.selected);
+    if (!targets.length) return;
+    targets.forEach(it => { it.child = childId; it.forceAdd = false; });
+    renderUploadSheet();
+    targets.forEach(queueDupCheck);
+}
+
+function renderUploadBulk(items) {
+    const box = document.getElementById('pu-bulk');
+    if (!box) return;
+    if (!items.length) { box.style.display = 'none'; return; }
+    const main = items.filter(it => !isSkippedDup(it));
+    const sel = main.filter(it => it.selected).length;
+    const dis = photoState.uploading ? ' disabled' : '';
+    box.innerHTML =
+        '<div class="pu-bulk-top"><b>取り込む写真 ' + sel + '/' + main.length + '枚</b>' +
+            '<button class="pu-mini" onclick="puSelectAll(true)"' + dis + '>すべて選ぶ</button>' +
+            '<button class="pu-mini" onclick="puSelectAll(false)"' + dis + '>すべて外す</button></div>' +
+        '<div class="pu-bulk-child"><span>チェックした写真の子を変更：</span>' +
+            SIBLINGS.map(c => '<button class="pu-mini" style="border-left:4px solid ' + c.color + ';" onclick="puBulkChild(\'' + c.id + '\')"' + dis + '>' + esc(c.name) + '</button>').join('') +
+        '</div>';
+    box.style.display = 'block';
 }
 
 async function photoFilesChosen(input) {
@@ -2493,7 +2563,7 @@ async function photoFilesChosen(input) {
     photoState.unread += files.length; // 全体の枚数を先に数えておく（進み具合を「○/全体」で出すため）
     renderUploadSheet(true);
     for (const f of files) {
-        const item = { file: f, preview: URL.createObjectURL(f), date: '', time: '000000', state: '', exifMissing: false, exifDone: false, checked: false, err: '' };
+        const item = { file: f, preview: URL.createObjectURL(f), date: '', time: '000000', state: '', exifMissing: false, exifDone: false, checked: false, selected: true, child: '', err: '' };
         photoState.uploadItems.push(item);
         photoState.unread--;
         const ex = await readExifDate(f);
@@ -2510,7 +2580,7 @@ function puDate(i, value) {
     it.date = value;
     it.exifMissing = false;
     const el = document.getElementById('pu-infos-' + i);
-    if (el) el.innerHTML = uploadInfoHtml(it, childById(photoState.uploadChild));
+    if (el) el.innerHTML = uploadInfoHtml(it, itemChild(it));
     renderUploadSheet(true);
     queueDupCheck(it);
 }
@@ -2526,11 +2596,12 @@ function puRemove(i) {
 
 // 写真1枚ぶんの下の注意書き（日付の問題・生後日数・失敗理由）
 function uploadInfoHtml(it, child) {
+    child = itemChild(it); // 写真ごとの子を優先する
     const problem = uploadItemProblem(it, child);
     let info;
     if (problem) info = '<div class="pu-info bad">' + problem + '</div>';
     else if (child) info = '<div class="pu-info">' + ageLabel(pAge(child.birth, it.date)) + '</div>';
-    else info = '<div class="pu-info">先に「だれの写真？」を選んでください</div>';
+    else info = '<div class="pu-info">「だれの写真？」を選ぶか、この写真の子を選んでください</div>';
     if (it.exifMissing && !it.date) info += '<div class="pu-info">撮影日が読み取れませんでした</div>';
     if (it.state === 'error') info += '<div class="pu-info bad">失敗：' + esc(it.err) + '</div>';
     if (it.checking) info += '<div class="pu-info">重複チェック中…</div>';
@@ -2557,10 +2628,20 @@ function uploadItemProblem(it, child) {
 function uploadRowHtml(it, i, child) {
     const stateIcon = it.state === 'done' ? '✅' : it.state === 'up' ? '⏳' : it.state === 'error' ? '⚠️' : '';
     const group = isSkippedDup(it) ? 'dup' : 'main';
-    return '<div class="pu-row' + (group === 'dup' ? ' skip' : '') + (it.dup && it.forceAdd ? ' forced' : '') + '" id="pu-row-' + i + '" data-group="' + group + '"><img class="pu-thumb" src="' + it.preview + '" alt="">' +
-        '<div class="pu-mid"><input type="date" value="' + it.date + '" onchange="puDate(' + i + ',this.value)"' + (photoState.uploading ? ' disabled' : '') + '><div id="pu-infos-' + i + '">' + uploadInfoHtml(it, child) + '</div></div>' +
+    const dis = photoState.uploading ? ' disabled' : '';
+    const eff = itemChild(it);
+    const childSel = '<select class="pu-childsel" style="border-left-color:' + (eff ? eff.color : '#cbd5e0') + ';" onchange="puItemChild(' + i + ',this.value)"' + dis + ' aria-label="この写真の子">' +
+        '<option value=""' + (eff ? '' : ' selected') + '>子を選ぶ…</option>' +
+        SIBLINGS.map(c => '<option value="' + c.id + '"' + (eff && c.id === eff.id ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '</select>';
+    // 重複でスキップされる写真には、チェック欄を出さない（「それでも追加する」で追加するときだけ、通常の一覧に出る）
+    const check = group === 'main'
+        ? '<input type="checkbox" class="pu-check"' + (it.selected ? ' checked' : '') + ' onchange="puSel(' + i + ',this.checked)"' + dis + ' aria-label="取り込む">'
+        : '';
+    return '<div class="pu-row' + (group === 'dup' ? ' skip' : '') + (group === 'main' && !it.selected ? ' unsel' : '') + (it.dup && it.forceAdd ? ' forced' : '') + '" id="pu-row-' + i + '" data-group="' + group + '">' +
+        check + '<img class="pu-thumb" src="' + it.preview + '" alt="">' +
+        '<div class="pu-mid"><input type="date" value="' + it.date + '" onchange="puDate(' + i + ',this.value)"' + dis + '>' + childSel + '<div id="pu-infos-' + i + '">' + uploadInfoHtml(it, child) + '</div></div>' +
         (stateIcon ? '<div class="pu-state">' + stateIcon + '</div>' : '') +
-        '<button class="pu-x" onclick="puRemove(' + i + ')"' + (photoState.uploading ? ' disabled' : '') + ' aria-label="外す">✕</button></div>';
+        '<button class="pu-x" onclick="puRemove(' + i + ')"' + dis + ' aria-label="外す">✕</button></div>';
 }
 
 // keepFocus=trueのときは、日付入力中に入力欄が作り直されないよう、リストはそのままにして下のボタンだけ更新する
@@ -2585,17 +2666,20 @@ function renderUploadSheet(keepFocus) {
         hydrateDupThumbs();
     }
     // 重複と判定されて追加しない写真は、数に入れない。重複チェック中は、終わるまで押せない
-    const active = items.filter(it => !isSkippedDup(it));
-    const skipped = items.length - active.length;
+    const active = items.filter(it => !isSkippedDup(it) && it.selected); // 重複でスキップされる写真と、チェックを外した写真は、取り込まない
+    const skipped = items.filter(it => isSkippedDup(it)).length;
+    const unselected = items.filter(it => !isSkippedDup(it) && !it.selected).length;
     const checking = items.some(it => it.checking);
     const loading = photoState.unread > 0 || items.some(it => !it.exifDone); // まだ読み込み中の写真がある
     renderUploadProgress(items, child);
-    const ready = !!child && active.length > 0 && !photoState.uploading && !checking && !loading && active.every(it => !uploadItemProblem(it, child));
+    renderUploadBulk(items);
+    const ready = active.length > 0 && !photoState.uploading && !checking && !loading && active.every(it => itemChild(it) && !uploadItemProblem(it, itemChild(it)));
     const go = document.getElementById('pu-go');
     go.disabled = !ready;
     go.innerText = loading ? '読み込み中…'
         : checking ? '重複チェック中…'
-        : active.length > 0 ? 'この' + active.length + '枚をアップロード' + (skipped ? '（重複' + skipped + '枚は除く）' : '')
+        : active.length > 0 ? '選んだ' + active.length + '枚をアップロード' + ((skipped || unselected) ? '（' + [skipped ? '重複' + skipped + '枚' : '', unselected ? '未選択' + unselected + '枚' : ''].filter(Boolean).join('・') + 'は除く）' : '')
+        : items.length > 0 ? '取り込む写真を選んでください'
         : 'アップロード';
 }
 
@@ -2613,17 +2697,17 @@ function renderUploadProgress(items, child) {
     } else if (total === 0) {
         box.style.display = 'none';
         return;
-    } else if (!child) {
-        text = '「だれの写真？」を選ぶと、重複チェックが始まります（' + total + '枚）';
-        cls = 'wait';
     } else {
-        const waitingDate = items.filter(it => it.exifDone && !it.date).length; // 撮影日が読み取れず、日付待ちの写真
-        const target = total - waitingDate;
+        const needDate = items.filter(it => it.exifDone && !it.date).length;                              // 撮影日が読み取れず、日付待ちの写真
+        const needChild = items.filter(it => !(it.exifDone && !it.date) && !itemChild(it)).length;      // 子どもが決まっていない写真
+        const target = total - needDate - needChild;
         const done = items.filter(it => it.checked).length;
         const dups = items.filter(it => it.dup).length;
-        const extra = waitingDate ? '／日付待ち ' + waitingDate + '枚' : '';
+        const extra = (needDate ? '／日付待ち ' + needDate + '枚' : '') + (needChild ? '／子ども未選択 ' + needChild + '枚' : '');
         if (target <= 0) {
-            text = '日付が読み取れなかった写真が ' + waitingDate + '枚あります。日付を入れてください';
+            text = (needChild && !needDate)
+                ? '「だれの写真？」を選ぶと、重複チェックが始まります（' + total + '枚）'
+                : '日付や子どもが決まっていない写真が ' + (needDate + needChild) + '枚あります';
             cls = 'wait';
         } else if (done < target) {
             text = '重複チェック中… ' + done + '/' + target + '枚' + extra;
@@ -2641,18 +2725,19 @@ function renderUploadProgress(items, child) {
 }
 
 async function photoUploadAll() {
-    const child = childById(photoState.uploadChild);
-    if (!child || photoState.uploading) return;
+    if (photoState.uploading) return;
     const statusEl = document.getElementById('pu-status');
-    const targets = photoState.uploadItems.filter(it => it.state !== 'done' && !isSkippedDup(it));
+    const targets = photoState.uploadItems.filter(it => it.state !== 'done' && !isSkippedDup(it) && it.selected && itemChild(it));
     const skippedCount = photoState.uploadItems.filter(it => it.state !== 'done' && isSkippedDup(it)).length;
     photoState.upTotal = targets.length;
     photoState.upDone = 0;
     photoState.uploading = true;
     renderUploadSheet();
-    let ok = 0, ng = 0, lastDate = '';
+    let ok = 0, ng = 0;
+    const lastDates = {}, byChild = {}; // 子どもごとの、最後に追加した日付と枚数
     for (let n = 0; n < targets.length; n++) {
         const it = targets[n];
+        const child = itemChild(it);
         it.state = 'up';
         it.err = '';
         statusEl.innerText = 'アップロード中… ' + (n + 1) + '/' + targets.length;
@@ -2668,7 +2753,8 @@ async function photoUploadAll() {
             });
             it.state = 'done';
             ok++;
-            lastDate = it.date;
+            lastDates[child.id] = it.date;
+            byChild[child.name] = (byChild[child.name] || 0) + 1;
         } catch (e) {
             it.state = 'error';
             it.err = e.message;
@@ -2685,8 +2771,9 @@ async function photoUploadAll() {
         if (it.state === 'done' || isSkippedDup(it)) { URL.revokeObjectURL(it.preview); return false; }
         return true;
     });
-    if (lastDate) photoState.picks[child.id] = lastDate;
-    statusEl.innerText = ok + '枚を追加しました' + (skippedCount ? '（重複の' + skippedCount + '枚は追加していません）' : '') + (ng ? '（' + ng + '枚は失敗。下に理由があります）' : '');
+    Object.keys(lastDates).forEach(c => { photoState.picks[c] = lastDates[c]; });
+    const breakdown = Object.keys(byChild).length > 1 ? '（' + Object.keys(byChild).map(n => n + ' ' + byChild[n] + '枚').join('／') + '）' : '';
+    statusEl.innerText = ok + '枚を追加しました' + breakdown + (skippedCount ? '（重複の' + skippedCount + '枚は追加していません）' : '') + (ng ? '（' + ng + '枚は失敗。下に理由があります）' : '');
     renderUploadSheet();
     renderPhotoPage();
 }
