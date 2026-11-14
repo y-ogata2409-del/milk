@@ -161,11 +161,11 @@
         .pu-x { background: none; border: none; font-size: 1.1rem; color: #95a5a6; padding: 6px; cursor: pointer; }
         /* 日付の3分割入力(西暦→月→日と自動で移る) */
         .pu-date { display: flex; align-items: center; gap: 4px; }
-        #page-photo .pu-date input.pu-dp { padding: 8px 2px; text-align: center; font-size: 0.95rem; }
-        #page-photo .pu-date input.pu-dy { width: 4.4em; }
-        #page-photo .pu-date input.pu-dm, #page-photo .pu-date input.pu-dd { width: 2.7em; }
+        .pu .pu-date input.pu-dp { padding: 8px 2px; text-align: center; font-size: 0.95rem; flex: none; box-sizing: border-box; border: 1px solid var(--border-color); border-radius: 8px; background: #fff; }
+        .pu .pu-date input.pu-dy { width: 4.6em; }
+        .pu .pu-date input.pu-dm, .pu .pu-date input.pu-dd { width: 2.9em; }
         .pu-date .pu-sep { color: #95a5a6; flex: none; }
-        .pu-date.bad input.pu-dp { border-color: #e74c3c; background: #fdecea; }
+        .pu .pu-date.bad input.pu-dp { border-color: #e74c3c; background: #fdecea; }
         .pu-state { font-size: 1.1rem; flex: none; }
         .pu-row.skip .pu-thumb { opacity: 0.4; }
         .pu-row.forced { border-left: 4px solid #f39c12; }
