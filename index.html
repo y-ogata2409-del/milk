@@ -534,7 +534,7 @@
         <label>だれの写真？（まとめて設定。写真ごとに変えることもできます）</label>
         <div class="pu-children" id="pu-children"></div>
         <button class="pc-btn" style="width:100%; padding:14px;" onclick="document.getElementById('pu-file').click()">📷 写真を選ぶ（複数OK）</button>
-        <input type="file" id="pu-file" accept="image/*" multiple style="display:none;" onchange="photoFilesChosen(this)">
+        <input type="file" id="pu-file" accept="image/*,.heic,.heif" multiple style="display:none;" onchange="photoFilesChosen(this)">
         <div class="pc-note" style="margin-top:8px;">撮影日が写真に入っていれば自動で読み取ります。日付は下で直せます。写真は縮小してから保存されます。同じファイルを二重に入れないよう、すでに入っている写真と同じものは追加しない形にします（それでも追加もできます）。縮小や画質を変えたファイルなど、中身が違うものは、同じ写真とは判定できません。チェックを入れた写真だけ取り込みます。子どもを間違えたときは、写真ごとの「子」の欄で選び直せます。</div>
         <div class="pu-progress" id="pu-progress" style="display:none;">
             <div class="pu-progress-text" id="pu-progress-text"></div>
@@ -2272,18 +2272,37 @@ async function photoViewerDelete() {
 
 // ---------- 写真の追加 ----------
 // 写真ファイルから撮影日時(EXIF)を読む。読めなければnull
+// JPEG: 先頭のAPP1(Exif)セグメントの中のTIFFを読む
+// HEIC/HEIF (ISO BMFF形式): Exifアイテムの中身もJPEGと同じTIFF形式なので、
+//   ファイル全体からTIFFヘッダ('II*\0' または 'MM\0*')を探して同じ処理に渡す。
+//   候補が本物かは日付の形まで読めるかで判定する(圧縮データ内の偶然の一致は弾かれる)
 async function readExifDate(file) {
     try {
-        const buf = await file.slice(0, 262144).arrayBuffer();
+        const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+        if (head[0] === 0xFF && head[1] === 0xD8) {
+            const buf = await file.slice(0, 262144).arrayBuffer();
+            const dv = new DataView(buf);
+            let off = 2;
+            while (off + 4 < dv.byteLength) {
+                const marker = dv.getUint16(off);
+                if ((marker & 0xFF00) !== 0xFF00) break;
+                const len = dv.getUint16(off + 2);
+                if (marker === 0xFFE1 && dv.getUint32(off + 4) === 0x45786966) return parseExifTiff(dv, off + 10);
+                off += 2 + len;
+            }
+            return null;
+        }
+        // JPEGでない画像(HEICなど): ファイル全体からTIFFヘッダを探す
+        const buf = await file.arrayBuffer();
         const dv = new DataView(buf);
-        if (dv.getUint16(0) !== 0xFFD8) return null;
-        let off = 2;
-        while (off + 4 < dv.byteLength) {
-            const marker = dv.getUint16(off);
-            if ((marker & 0xFF00) !== 0xFF00) break;
-            const len = dv.getUint16(off + 2);
-            if (marker === 0xFFE1 && dv.getUint32(off + 4) === 0x45786966) return parseExifTiff(dv, off + 10);
-            off += 2 + len;
+        const u8 = new Uint8Array(buf);
+        let tried = 0;
+        for (let i = 0; i + 4 <= u8.length && tried < 16; i++) {
+            const isTiff = (u8[i] === 0x49 && u8[i + 1] === 0x49 && u8[i + 2] === 0x2A && u8[i + 3] === 0x00)
+                        || (u8[i] === 0x4D && u8[i + 1] === 0x4D && u8[i + 2] === 0x00 && u8[i + 3] === 0x2A);
+            if (!isTiff) continue;
+            tried++;
+            try { const r = parseExifTiff(dv, i); if (r) return r; } catch (e) {}
         }
     } catch (e) {}
     return null;
@@ -2370,9 +2389,73 @@ async function blobFingerprint(blob) {
     }
 }
 
+// ---------- HEIC対応(PCのChromeなど、HEICをそのまま開けないブラウザ向け) ----------
+// 撮影日の読み取りはバイト列の解析なのでブラウザを問わないが、表示と縮小にはデコードが要る。
+// ネイティブで開ける環境(iPhone Safariなど)では何もせず、開けない場合だけ
+// 変換ライブラリ(heic2any)をCDNから読み込んでJPEGに変換してから処理する。
+function isHeicFile(file) {
+    const t = (file.type || '').toLowerCase();
+    const n = (file.name || '').toLowerCase();
+    return t.indexOf('heic') !== -1 || t.indexOf('heif') !== -1 || /\.hei[cf]$/.test(n);
+}
+
+let heic2anyPromise = null;
+function loadHeic2any() {
+    if (window.heic2any) return Promise.resolve();
+    if (!heic2anyPromise) {
+        heic2anyPromise = new Promise((res, rej) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+            s.onload = () => res();
+            s.onerror = () => { heic2anyPromise = null; rej(new Error('HEIC変換ライブラリを読み込めませんでした(通信環境を確認してください)')); };
+            document.head.appendChild(s);
+        });
+    }
+    return heic2anyPromise;
+}
+
+// HEICをJPEG Blobに変換する(結果はアイテムに覚えて、プレビューと縮小で使い回す)
+function getHeicJpeg(it) {
+    if (!it.heicPromise) {
+        it.heicPromise = (async () => {
+            await loadHeic2any();
+            const out = await window.heic2any({ blob: it.file, toType: 'image/jpeg', quality: 0.92 });
+            const blob = Array.isArray(out) ? out[0] : out;
+            if (!blob) throw new Error('HEICの変換に失敗しました');
+            return blob;
+        })().catch(e => { it.heicPromise = null; throw e; });
+    }
+    return it.heicPromise;
+}
+
+// プレビューが開けないHEICは、変換したJPEGのプレビューに差し替える
+async function fixHeicPreview(it) {
+    try {
+        const img = new Image();
+        img.src = it.preview;
+        await img.decode(); // 開ければ何もしない
+        return;
+    } catch (e) {}
+    try {
+        const blob = await getHeicJpeg(it);
+        if (photoState.uploadItems.indexOf(it) === -1) return; // すでに外されていたら何もしない
+        URL.revokeObjectURL(it.preview);
+        it.preview = URL.createObjectURL(blob);
+        renderUploadSheet();
+    } catch (e) {}
+}
+
 function getResizedBlob(it) {
     if (!it.blobPromise) {
-        it.blobPromise = resizeToJpeg(it.file).catch(e => { it.blobPromise = null; throw e; });
+        it.blobPromise = (async () => {
+            try {
+                return await resizeToJpeg(it.file);
+            } catch (e) {
+                if (!isHeicFile(it.file)) throw e;
+                // HEICをそのまま開けないブラウザ: 変換してから縮小する
+                return await resizeToJpeg(await getHeicJpeg(it));
+            }
+        })().catch(e => { it.blobPromise = null; throw e; });
     }
     return it.blobPromise;
 }
@@ -2565,6 +2648,7 @@ async function photoFilesChosen(input) {
     for (const f of files) {
         const item = { file: f, preview: URL.createObjectURL(f), date: '', time: '000000', state: '', exifMissing: false, exifDone: false, checked: false, selected: true, child: '', err: '' };
         photoState.uploadItems.push(item);
+        if (isHeicFile(f)) fixHeicPreview(item);
         photoState.unread--;
         const ex = await readExifDate(f);
         if (ex) { item.date = ex.date; item.time = ex.time; } else { item.exifMissing = true; }
