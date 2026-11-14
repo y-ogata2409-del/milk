@@ -159,6 +159,13 @@
         .pu-info { font-size: 0.78rem; color: #7f8c8d; margin-top: 4px; }
         .pu-info.bad { color: #c0392b; font-weight: bold; }
         .pu-x { background: none; border: none; font-size: 1.1rem; color: #95a5a6; padding: 6px; cursor: pointer; }
+        /* 日付の3分割入力(西暦→月→日と自動で移る) */
+        .pu-date { display: flex; align-items: center; gap: 4px; }
+        #page-photo .pu-date input.pu-dp { padding: 8px 2px; text-align: center; font-size: 0.95rem; }
+        #page-photo .pu-date input.pu-dy { width: 4.4em; }
+        #page-photo .pu-date input.pu-dm, #page-photo .pu-date input.pu-dd { width: 2.7em; }
+        .pu-date .pu-sep { color: #95a5a6; flex: none; }
+        .pu-date.bad input.pu-dp { border-color: #e74c3c; background: #fdecea; }
         .pu-state { font-size: 1.1rem; flex: none; }
         .pu-row.skip .pu-thumb { opacity: 0.4; }
         .pu-row.forced { border-left: 4px solid #f39c12; }
@@ -2678,6 +2685,79 @@ function puDate(i, value) {
     queueDupCheck(it);
 }
 
+// 日付の3分割入力(西暦/月/日)。標準の日付欄は西暦が4桁を超えて入力できる作りで、
+// 4桁打っても次の欄へ移らないため、取り込み画面ではこちらを使う
+function dateFieldsHtml(it, i, dis) {
+    const p = (it.date || '').split('-');
+    const part = (cls, id, ph, max, val, partName) =>
+        '<input class="pu-dp ' + cls + '" id="' + id + '-' + i + '" type="text" inputmode="numeric" placeholder="' + ph + '" maxlength="' + max + '" value="' + val + '"' +
+        ' oninput="puDatePart(' + i + ',\'' + partName + '\',this)" onkeydown="puDateKey(' + i + ',\'' + partName + '\',event)" onblur="puDateCommit(' + i + ',true)"' + dis + '>';
+    return '<span class="pu-date" id="pu-date-' + i + '">' +
+        part('pu-dy', 'pu-dy', '西暦', 4, p[0] || '', 'y') + '<span class="pu-sep">/</span>' +
+        part('pu-dm', 'pu-dm', '月', 2, p[1] || '', 'm') + '<span class="pu-sep">/</span>' +
+        part('pu-dd', 'pu-dd', '日', 2, p[2] || '', 'd') +
+        '</span>';
+}
+
+function puDatePart(i, partName, el) {
+    // 「2020-06-25」のような形で貼り付けられたら、3つの欄に振り分ける
+    if (/[-/]/.test(el.value)) {
+        const nums = el.value.split(/[-/]/).map(s => s.replace(/\D/g, ''));
+        if (nums.length >= 2) {
+            const yEl = document.getElementById('pu-dy-' + i);
+            const mEl = document.getElementById('pu-dm-' + i);
+            const dEl = document.getElementById('pu-dd-' + i);
+            if (yEl) yEl.value = (nums[0] || '').slice(0, 4);
+            if (mEl) mEl.value = (nums[1] || '').slice(0, 2);
+            if (dEl) dEl.value = (nums[2] || '').slice(0, 2);
+            puDateCommit(i, true);
+            return;
+        }
+    }
+    el.value = el.value.replace(/\D/g, '').slice(0, partName === 'y' ? 4 : 2);
+    const full = partName === 'y' ? el.value.length === 4 : el.value.length === 2;
+    if (full) {
+        const nextId = partName === 'y' ? 'pu-dm-' + i : partName === 'm' ? 'pu-dd-' + i : null;
+        if (nextId) { const n = document.getElementById(nextId); if (n) { n.focus(); n.select(); } }
+    }
+    puDateCommit(i, false);
+}
+
+function puDateKey(i, partName, ev) {
+    if (ev.key === 'Backspace' && !ev.target.value) {
+        const prevId = partName === 'd' ? 'pu-dm-' + i : partName === 'm' ? 'pu-dy-' + i : null;
+        if (prevId) { const p = document.getElementById(prevId); if (p) { p.focus(); p.select(); } }
+    } else if (ev.key === '/' || ev.key === '-') {
+        ev.preventDefault();
+        const nextId = partName === 'y' ? 'pu-dm-' + i : partName === 'm' ? 'pu-dd-' + i : null;
+        if (nextId) { const n = document.getElementById(nextId); if (n) { n.focus(); n.select(); } }
+    } else if (ev.key === 'Enter') {
+        puDateCommit(i, true);
+    }
+}
+
+// 3つの欄がそろって実在する日付になったら、写真の日付として確定する
+function puDateCommit(i, pad) {
+    const it = photoState.uploadItems[i];
+    if (!it) return;
+    const yEl = document.getElementById('pu-dy-' + i);
+    const mEl = document.getElementById('pu-dm-' + i);
+    const dEl = document.getElementById('pu-dd-' + i);
+    if (!yEl || !mEl || !dEl) return;
+    const wrap = document.getElementById('pu-date-' + i);
+    const y = yEl.value, m = mEl.value, d = dEl.value;
+    if (!y && !m && !d) { if (wrap) wrap.classList.remove('bad'); if (it.date) puDate(i, ''); return; }
+    if (y.length !== 4 || !m || !d) { if (wrap) wrap.classList.remove('bad'); return; } // まだ入力途中
+    const yv = parseInt(y, 10), mv = parseInt(m, 10), dv = parseInt(d, 10);
+    const dt = new Date(yv, mv - 1, dv);
+    const ok = mv >= 1 && mv <= 12 && dt.getFullYear() === yv && dt.getMonth() === mv - 1 && dt.getDate() === dv;
+    if (!ok) { if (wrap) wrap.classList.add('bad'); return; } // 2月30日など、存在しない日付
+    if (wrap) wrap.classList.remove('bad');
+    if (pad) { mEl.value = String(mv).padStart(2, '0'); dEl.value = String(dv).padStart(2, '0'); }
+    const value = y + '-' + String(mv).padStart(2, '0') + '-' + String(dv).padStart(2, '0');
+    if (value !== it.date) puDate(i, value);
+}
+
 // 写真を右へ90°回転して取り込む(押すたびに90°ずつ)。回転は取り込み時に焼き込まれる
 function puRotate(i) {
     const it = photoState.uploadItems[i];
@@ -2755,7 +2835,7 @@ function uploadRowHtml(it, i, child) {
         : '';
     return '<div class="pu-row' + (group === 'dup' ? ' skip' : '') + (group === 'main' && !it.selected ? ' unsel' : '') + (it.dup && it.forceAdd ? ' forced' : '') + '" id="pu-row-' + i + '" data-group="' + group + '">' +
         check + '<img class="pu-thumb" src="' + (it.rotPreview || it.preview) + '" alt="">' +
-        '<div class="pu-mid"><input type="date" value="' + it.date + '" onchange="puDate(' + i + ',this.value)"' + dis + '>' + childSel + '<div id="pu-infos-' + i + '">' + uploadInfoHtml(it, child) + '</div></div>' +
+        '<div class="pu-mid">' + dateFieldsHtml(it, i, dis) + childSel + '<div id="pu-infos-' + i + '">' + uploadInfoHtml(it, child) + '</div></div>' +
         (stateIcon ? '<div class="pu-state">' + stateIcon + '</div>' : '') +
         '<button class="pu-x" onclick="puRotate(' + i + ')"' + dis + ' aria-label="右へ90度回転" title="右へ90°回転">↻</button>' +
         '<button class="pu-x" onclick="puRemove(' + i + ')"' + dis + ' aria-label="外す">✕</button></div>';
